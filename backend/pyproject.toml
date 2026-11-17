@@ -1,0 +1,46 @@
+[project]
+name = "chat-rooms-api"
+version = "1.0.0"
+description = "Real-time chat rooms API. Django REST Framework with Supabase Auth, Postgres, Storage and Realtime."
+requires-python = ">=3.11"
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["test_*.py"]
+addopts = "--cov=apps --cov=services --cov=config --cov-report=term-missing --cov-fail-under=85"
+markers = [
+    "throttle: enable rate limiting for this test",
+]
+
+[tool.coverage.run]
+branch = true
+omit = [
+    "*/migrations/*",
+    "manage.py",
+    "config/asgi.py",
+    "config/wsgi.py",
+]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["apps", "services", "config", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["B008"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["B011"]
+"config/settings/**" = ["F403", "F405"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["apps", "services", "config"]
+
+[tool.bandit]
+exclude_dirs = ["tests", "env", ".venv", "migrations"]
+skips = ["B101"]
