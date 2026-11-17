@@ -12,15 +12,12 @@ def messages_per_room(user):
     else:
         room_ids = RoomMember.objects.filter(user=user.profile).values("room_id")
         rooms = Room.objects.filter(id__in=room_ids)
-    return (
-        rooms.annotate(
-            message_count=Count(
-                "messages",
-                filter=Q(messages__deleted_at__isnull=True),
-            )
+    return rooms.annotate(
+        message_count=Count(
+            "messages",
+            filter=Q(messages__deleted_at__isnull=True),
         )
-        .order_by("name")
-    )
+    ).order_by("name")
 
 
 def room_stats(profile, room_id):

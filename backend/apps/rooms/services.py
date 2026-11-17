@@ -38,11 +38,16 @@ def room_card(room, profile):
         .first()
     )
     latest = (
-        Message.objects.filter(room=room).select_related("sender").order_by("-created_at", "-id").first()
+        Message.objects.filter(room=room)
+        .select_related("sender")
+        .order_by("-created_at", "-id")
+        .first()
     )
     unread = 0
     if member is not None:
-        unread_qs = Message.objects.filter(room=room, deleted_at__isnull=True).exclude(sender=profile)
+        unread_qs = Message.objects.filter(room=room, deleted_at__isnull=True).exclude(
+            sender=profile
+        )
         if member.last_read_message_id:
             unread_qs = unread_qs.filter(created_at__gt=member.last_read_message.created_at)
         unread = unread_qs.count()
@@ -163,7 +168,9 @@ def delete_room(profile, room_id):
 def save_room_avatar(profile, room_id, upload):
     room, member = require_room_member(room_id, profile)
     require_manager(member)
-    prepared = prepare_image(read_limited(upload, settings.AVATAR_MAX_BYTES), settings.AVATAR_MAX_BYTES)
+    prepared = prepare_image(
+        read_limited(upload, settings.AVATAR_MAX_BYTES), settings.AVATAR_MAX_BYTES
+    )
     path = f"rooms/{room.id}/{secrets.token_hex(16)}.{prepared.ext}"
     try:
         upload_bytes(settings.SUPABASE_AVATAR_BUCKET, path, prepared.data, prepared.content_type)
@@ -255,7 +262,9 @@ def remove_member(profile, room_id, target_user_id):
         require_manager(actor)
         target = _locked_target(room, target_user_id)
         if target.user_id == actor.user_id:
-            raise DomainError("validation_error", "Leave the room instead of removing yourself", 400)
+            raise DomainError(
+                "validation_error", "Leave the room instead of removing yourself", 400
+            )
         if target.role == RoomMember.Role.OWNER:
             raise DomainError("permission_denied", "The owner cannot be removed", 403)
         if actor.role == RoomMember.Role.ADMIN and target.role == RoomMember.Role.ADMIN:
@@ -286,14 +295,15 @@ def create_invite(profile, room_id, *, max_uses, expires_in_hours):
     for _ in range(5):
         code = secrets.token_urlsafe(16)
         try:
-            return RoomInvite.objects.create(
-                room=room,
-                code=code,
-                created_by=profile,
-                expires_at=expires_at,
-                max_uses=max_uses,
-                uses=0,
-            )
+            with transaction.atomic():
+                return RoomInvite.objects.create(
+                    room=room,
+                    code=code,
+                    created_by=profile,
+                    expires_at=expires_at,
+                    max_uses=max_uses,
+                    uses=0,
+                )
         except IntegrityError:
             continue
     raise DomainError("server_error", "Something went wrong", 500)
@@ -341,9 +351,7 @@ def _leave(profile, room_id, *, allow_archived):
             room = manager.select_for_update().get(pk=room_id)
         except Room.DoesNotExist as exc:
             raise DomainError("not_found", "Not found", 404) from exc
-        member = (
-            RoomMember.objects.select_for_update().filter(room=room, user=profile).first()
-        )
+        member = RoomMember.objects.select_for_update().filter(room=room, user=profile).first()
         if member is None:
             if room.is_private or room.deleted_at:
                 raise DomainError("not_found", "Not found", 404)

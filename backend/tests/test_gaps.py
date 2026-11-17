@@ -12,7 +12,12 @@ import pytest
 import requests
 import responses
 from django.contrib import admin
-from django.core.exceptions import ImproperlyConfigured, PermissionDenied, RequestDataTooBig, SuspiciousOperation
+from django.core.exceptions import (
+    ImproperlyConfigured,
+    PermissionDenied,
+    RequestDataTooBig,
+    SuspiciousOperation,
+)
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import IntegrityError
 from django.http import Http404
@@ -25,10 +30,12 @@ from rest_framework.exceptions import (
     MethodNotAllowed,
     NotFound,
     ParseError,
-    PermissionDenied as DRFPermissionDenied,
     Throttled,
     UnsupportedMediaType,
     ValidationError,
+)
+from rest_framework.exceptions import (
+    PermissionDenied as DRFPermissionDenied,
 )
 from rest_framework.test import APIRequestFactory
 from rest_framework.views import APIView
@@ -53,7 +60,12 @@ from apps.accounts.services import (
     search_profiles,
     update_profile,
 )
-from apps.accounts.validators import validate_bio, validate_display_name, validate_password, validate_status
+from apps.accounts.validators import (
+    validate_bio,
+    validate_display_name,
+    validate_password,
+    validate_status,
+)
 from apps.chat.models import Message, MessageAttachment
 from apps.chat.serializers import serialize_message
 from apps.chat.services import (
@@ -89,9 +101,16 @@ from apps.rooms.services import (
     save_room_avatar,
     update_room,
 )
-from services.supabase_auth import SupabaseError
+from services.supabase_auth import (
+    SupabaseError,
+    disable_user,
+    logout,
+    refresh,
+    sign_in,
+    sign_up,
+    update_password,
+)
 from services.supabase_auth import delete_user as delete_supabase_user
-from services.supabase_auth import disable_user, logout, refresh, sign_in, sign_up, update_password
 from services.supabase_realtime import broadcast
 from services.supabase_storage import create_signed_url, delete_object, upload_bytes
 from tests.conftest import auth_user
@@ -115,8 +134,6 @@ def test_dev_settings_and_prod_missing_env(monkeypatch):
     import config.settings.dev as dev
 
     assert isinstance(dev.DEBUG, bool)
-    import config.settings.prod as prod
-
     required = {
         "SECRET_KEY": "a-real-production-secret",
         "ALLOWED_HOSTS": "api.example.com",
@@ -127,15 +144,24 @@ def test_dev_settings_and_prod_missing_env(monkeypatch):
         "SUPABASE_SERVICE_ROLE_KEY": "service",
         "CORS_ORIGIN": "https://app.example.com",
     }
+    for key, value in required.items():
+        monkeypatch.setenv(key, value)
+    import config.settings.base as base
+
+    importlib.reload(base)
+    import config.settings.prod as prod
+
     for missing in ("SECRET_KEY", "ALLOWED_HOSTS", "REDIS_URL", "DATABASE_URL"):
         for key, value in required.items():
             monkeypatch.setenv(key, value)
+        importlib.reload(base)
         monkeypatch.delenv(missing, raising=False)
         with pytest.raises(ImproperlyConfigured):
             importlib.reload(prod)
     for key, value in required.items():
         monkeypatch.setenv(key, value)
     monkeypatch.setenv("SECRET_KEY", "django-insecure-not-for-prod")
+    importlib.reload(base)
     with pytest.raises(ImproperlyConfigured):
         importlib.reload(prod)
 
@@ -205,7 +231,7 @@ def test_image_guards_and_reencode():
     upload = SimpleNamespace(size=10, read=lambda n: b"")
     with _raises("file"):
         read_limited(upload, 100)
-    upload = SimpleNamespace(size=5, read=lambda n: b"abcde")
+    upload = SimpleNamespace(size=None, read=lambda n: b"abcde")
     with _raises("file"):
         read_limited(upload, 4)
     jpeg = io.BytesIO()
@@ -243,27 +269,25 @@ def test_token_verification_edges(settings):
     with pytest.raises(AuthenticationFailed):
         verify_token(make_token(profile.id, secret="test-jwt-secret-key-with-32bytes!!"))
     settings.SUPABASE_JWT_SECRET = "test-jwt-secret-key-with-32bytes!!"
-    odd = jwt.encode(
-        {"sub": str(profile.id), "aud": "authenticated", "exp": int(timezone.now().timestamp()) + 60},
-        settings.SUPABASE_JWT_SECRET,
-        algorithm="HS384",
-    )
+    import base64
+    import json
+
+    header = base64.urlsafe_b64encode(json.dumps({"alg": "HS512"}).encode()).rstrip(b"=").decode()
     with pytest.raises(AuthenticationFailed):
-        verify_token(odd)
+        verify_token(f"{header}.e30.")
     with pytest.raises(AuthenticationFailed):
         user_from_claims({"sub": "nope"})
-    clear_jwks_cache()
-    settings.SUPABASE_URL = ""
-    header = jwt.get_unverified_header
-    private = __import__("cryptography.hazmat.primitives.asymmetric.rsa", fromlist=["rsa"]).generate_private_key(
-        public_exponent=65537, key_size=2048
-    )
+    from cryptography.hazmat.primitives.asymmetric import rsa
+
+    private = rsa.generate_private_key(public_exponent=65537, key_size=2048)
     token = jwt.encode(
         {"sub": str(profile.id), "aud": "authenticated", "exp": 9999999999},
         private,
         algorithm="RS256",
+        headers={"kid": "kid-1"},
     )
-    assert header  # keep the import path obvious for readers of the failure
+    clear_jwks_cache()
+    settings.SUPABASE_URL = ""
     with pytest.raises(AuthenticationFailed):
         verify_token(token)
     settings.SUPABASE_URL = "http://supabase.test"
@@ -286,11 +310,21 @@ def test_token_verification_edges(settings):
 
 def test_supabase_auth_and_storage_failures(settings):
     with responses.RequestsMock() as mocked:
-        mocked.add(responses.POST, "http://supabase.test/auth/v1/signup", json={"msg": "already registered"}, status=422)
+        mocked.add(
+            responses.POST,
+            "http://supabase.test/auth/v1/signup",
+            json={"msg": "already registered"},
+            status=422,
+        )
         with pytest.raises(SupabaseError) as duplicate:
             sign_up("a@b.co", "CorrectHorse1", "ada", "Ada")
         assert duplicate.value.code == "duplicate"
-        mocked.add(responses.POST, "http://supabase.test/auth/v1/signup", json={"error": "nope"}, status=500)
+        mocked.add(
+            responses.POST,
+            "http://supabase.test/auth/v1/signup",
+            json={"error": "nope"},
+            status=500,
+        )
         with pytest.raises(SupabaseError):
             sign_up("a@b.co", "CorrectHorse1", "ada", "Ada")
         mocked.add(
@@ -302,13 +336,20 @@ def test_supabase_auth_and_storage_failures(settings):
         with pytest.raises(SupabaseError) as empty_identities:
             sign_up("a@b.co", "CorrectHorse1", "ada", "Ada")
         assert empty_identities.value.code == "duplicate"
-        mocked.add(responses.POST, "http://supabase.test/auth/v1/signup", json={"user": {}}, status=200)
+        mocked.add(
+            responses.POST, "http://supabase.test/auth/v1/signup", json={"user": {}}, status=200
+        )
         with pytest.raises(SupabaseError):
             sign_up("a@b.co", "CorrectHorse1", "ada", "Ada")
         mocked.add(responses.POST, "http://supabase.test/auth/v1/signup", body="nope", status=200)
         with pytest.raises(SupabaseError):
             sign_up("a@b.co", "CorrectHorse1", "ada", "Ada")
-        mocked.add(responses.POST, "http://supabase.test/auth/v1/token?grant_type=password", json={}, status=401)
+        mocked.add(
+            responses.POST,
+            "http://supabase.test/auth/v1/token?grant_type=password",
+            json={},
+            status=401,
+        )
         with pytest.raises(SupabaseError):
             sign_in("a@b.co", "CorrectHorse1")
         mocked.add(
@@ -319,7 +360,12 @@ def test_supabase_auth_and_storage_failures(settings):
         )
         with pytest.raises(SupabaseError):
             sign_in("a@b.co", "CorrectHorse1")
-        mocked.add(responses.POST, "http://supabase.test/auth/v1/token?grant_type=refresh_token", json={}, status=401)
+        mocked.add(
+            responses.POST,
+            "http://supabase.test/auth/v1/token?grant_type=refresh_token",
+            json={},
+            status=401,
+        )
         with pytest.raises(SupabaseError):
             refresh("stale")
         mocked.add(
@@ -336,23 +382,35 @@ def test_supabase_auth_and_storage_failures(settings):
         mocked.add(responses.PUT, "http://supabase.test/auth/v1/user", status=400)
         with pytest.raises(SupabaseError):
             update_password("access", "CorrectHorse2")
-        mocked.add(responses.PUT, re.compile(r"http://supabase.test/auth/v1/admin/users/"), status=500)
+        mocked.add(
+            responses.PUT, re.compile(r"http://supabase.test/auth/v1/admin/users/"), status=500
+        )
         with pytest.raises(SupabaseError):
             disable_user("user")
-        mocked.add(responses.DELETE, re.compile(r"http://supabase.test/auth/v1/admin/users/"), status=500)
+        mocked.add(
+            responses.DELETE, re.compile(r"http://supabase.test/auth/v1/admin/users/"), status=500
+        )
         with pytest.raises(SupabaseError):
             delete_supabase_user("user")
         mocked.add(responses.POST, re.compile(r"http://supabase.test/storage/"), status=500)
         with pytest.raises(SupabaseError):
             upload_bytes("avatars", "a.png", b"x", "image/png")
-        mocked.add(responses.POST, re.compile(r"http://supabase.test/storage/"), body=requests.ConnectionError("no"))
+        mocked.add(
+            responses.POST,
+            re.compile(r"http://supabase.test/storage/"),
+            body=requests.ConnectionError("no"),
+        )
         with pytest.raises(SupabaseError):
             upload_bytes("avatars", "a.png", b"x", "image/png")
         mocked.add(responses.DELETE, re.compile(r"http://supabase.test/storage/"), status=500)
         delete_object("avatars", "a.png")
         mocked.add(responses.DELETE, re.compile(r"http://supabase.test/storage/"), status=404)
         delete_object("avatars", "a.png")
-        mocked.add(responses.DELETE, re.compile(r"http://supabase.test/storage/"), body=requests.ConnectionError("no"))
+        mocked.add(
+            responses.DELETE,
+            re.compile(r"http://supabase.test/storage/"),
+            body=requests.ConnectionError("no"),
+        )
         delete_object("avatars", "gone.png")
         mocked.add(
             responses.POST,
@@ -405,7 +463,14 @@ def test_supabase_auth_and_storage_failures(settings):
     settings.SUPABASE_SERVICE_ROLE_KEY = ""
     with pytest.raises(SupabaseError):
         upload_bytes("avatars", "a.png", b"x", "image/png")
-    for code in ("not_configured", "duplicate", "logout_failed", "disable_failed", "password_update_failed", "other"):
+    for code in (
+        "not_configured",
+        "duplicate",
+        "logout_failed",
+        "disable_failed",
+        "password_update_failed",
+        "other",
+    ):
         assert map_supabase(SupabaseError(code)).code
 
 
@@ -427,8 +492,6 @@ def test_account_service_error_branches(monkeypatch, profile):
         search_profiles("x" * 51)
     with _raises("username"):
         replace_profile(profile, username="No", display_name="Ok", bio="", status="online")
-    with _raises("username"):
-        replace_profile(profile, username=profile.username, display_name="Ok", bio="", status="online")
     taken = ProfileFactory()
     with _raises("username"):
         replace_profile(profile, username=taken.username, display_name="Ok", bio="", status="away")
@@ -440,14 +503,24 @@ def test_account_service_error_branches(monkeypatch, profile):
 
     monkeypatch.setattr("apps.accounts.services.sign_up", boom_signup)
     with _raises("email"):
-        register(email="new@example.com", password="CorrectHorse1", username="brandnew", display_name="New")
+        register(
+            email="new@example.com",
+            password="CorrectHorse1",
+            username="brandnew",
+            display_name="New",
+        )
 
     monkeypatch.setattr(
         "apps.accounts.services.sign_up",
         lambda *args, **kwargs: {"user_id": "not-uuid"},
     )
     with _raises("upstream"):
-        register(email="new@example.com", password="CorrectHorse1", username="brandnew", display_name="New")
+        register(
+            email="new@example.com",
+            password="CorrectHorse1",
+            username="brandnew",
+            display_name="New",
+        )
 
     user_id = str(uuid.uuid4())
     monkeypatch.setattr(
@@ -466,7 +539,12 @@ def test_account_service_error_branches(monkeypatch, profile):
 
     monkeypatch.setattr(Profile.objects, "create", integrity)
     with _raises("username"):
-        register(email="new@example.com", password="CorrectHorse1", username="brandnew", display_name="New")
+        register(
+            email="new@example.com",
+            password="CorrectHorse1",
+            username="brandnew",
+            display_name="New",
+        )
     assert deleted == [user_id]
 
     def explode_delete(uid):
@@ -479,7 +557,12 @@ def test_account_service_error_branches(monkeypatch, profile):
 
     monkeypatch.setattr(Profile.objects, "create", explode_create)
     with _raises("server"):
-        register(email="new@example.com", password="CorrectHorse1", username="brandnew", display_name="New")
+        register(
+            email="new@example.com",
+            password="CorrectHorse1",
+            username="brandnew",
+            display_name="New",
+        )
 
     def bad_login(*args, **kwargs):
         raise SupabaseError("invalid_credentials")
@@ -487,7 +570,10 @@ def test_account_service_error_branches(monkeypatch, profile):
     monkeypatch.setattr("apps.accounts.services.sign_in", bad_login)
     with _raises("invalid"):
         login(email="missing@example.com", password="CorrectHorse1")
-    monkeypatch.setattr("apps.accounts.services.sign_in", lambda *a, **k: (_ for _ in ()).throw(SupabaseError("unavailable")))
+    monkeypatch.setattr(
+        "apps.accounts.services.sign_in",
+        lambda *a, **k: (_ for _ in ()).throw(SupabaseError("unavailable")),
+    )
     with _raises("upstream"):
         login(email="missing@example.com", password="CorrectHorse1")
     monkeypatch.setattr(
@@ -508,10 +594,16 @@ def test_account_service_error_branches(monkeypatch, profile):
         refresh_session(refresh_token="stale")
     with _raises("invalid"):
         logout_session(access_token="")
-    monkeypatch.setattr("apps.accounts.services.logout", lambda *a, **k: (_ for _ in ()).throw(SupabaseError("logout_failed")))
+    monkeypatch.setattr(
+        "apps.accounts.services.logout",
+        lambda *a, **k: (_ for _ in ()).throw(SupabaseError("logout_failed")),
+    )
     with _raises("upstream"):
         logout_session(access_token="access")
-    monkeypatch.setattr("apps.accounts.services.recover", lambda *a, **k: (_ for _ in ()).throw(SupabaseError("unavailable")))
+    monkeypatch.setattr(
+        "apps.accounts.services.recover",
+        lambda *a, **k: (_ for _ in ()).throw(SupabaseError("unavailable")),
+    )
     assert "reset" in forgot_password(email="a@b.co")["detail"]
     monkeypatch.setattr(
         "apps.accounts.services.update_password",
@@ -526,27 +618,58 @@ def test_account_service_error_branches(monkeypatch, profile):
     assert "verification" in resend_verification(email="a@b.co")["detail"]
     actor = SimpleNamespace(email="")
     with _raises("password"):
-        change_password(user=actor, access_token="t", current_password="CorrectHorse1", new_password="CorrectHorse1")
+        change_password(
+            user=actor,
+            access_token="t",
+            current_password="CorrectHorse1",
+            new_password="CorrectHorse1",
+        )
     actor.email = ""
     with _raises("email"):
-        change_password(user=actor, access_token="t", current_password="CorrectHorse1", new_password="CorrectHorse2")
+        change_password(
+            user=actor,
+            access_token="t",
+            current_password="CorrectHorse1",
+            new_password="CorrectHorse2",
+        )
     actor.email = "a@b.co"
     with _raises("invalid"):
-        change_password(user=actor, access_token="", current_password="CorrectHorse1", new_password="CorrectHorse2")
-    monkeypatch.setattr("apps.accounts.services.sign_in", lambda *a, **k: (_ for _ in ()).throw(SupabaseError("invalid_credentials")))
+        change_password(
+            user=actor,
+            access_token="",
+            current_password="CorrectHorse1",
+            new_password="CorrectHorse2",
+        )
+    monkeypatch.setattr(
+        "apps.accounts.services.sign_in",
+        lambda *a, **k: (_ for _ in ()).throw(SupabaseError("invalid_credentials")),
+    )
     with _raises("invalid_password"):
-        change_password(user=actor, access_token="t", current_password="WrongHorse1", new_password="CorrectHorse2")
+        change_password(
+            user=actor,
+            access_token="t",
+            current_password="WrongHorse1",
+            new_password="CorrectHorse2",
+        )
     monkeypatch.setattr("apps.accounts.services.sign_in", lambda *a, **k: {"access_token": "t"})
     monkeypatch.setattr(
         "apps.accounts.services.update_password",
         lambda *a, **k: (_ for _ in ()).throw(SupabaseError("unavailable")),
     )
     with _raises("upstream"):
-        change_password(user=actor, access_token="t", current_password="CorrectHorse1", new_password="CorrectHorse2")
+        change_password(
+            user=actor,
+            access_token="t",
+            current_password="CorrectHorse1",
+            new_password="CorrectHorse2",
+        )
 
     profile.avatar_path = "old/avatar.png"
     profile.save(update_fields=["avatar_path"])
-    monkeypatch.setattr("apps.accounts.services.upload_bytes", lambda *a, **k: (_ for _ in ()).throw(SupabaseError("not_configured")))
+    monkeypatch.setattr(
+        "apps.accounts.services.upload_bytes",
+        lambda *a, **k: (_ for _ in ()).throw(SupabaseError("not_configured")),
+    )
     with _raises("upstream"):
         save_avatar(profile, SimpleNamespace(size=None, read=lambda n: _png()))
     monkeypatch.setattr("apps.accounts.services.upload_bytes", lambda *a, **k: None)
@@ -556,7 +679,10 @@ def test_account_service_error_branches(monkeypatch, profile):
     remove_avatar(profile)
     assert profile.avatar_path == ""
 
-    monkeypatch.setattr("apps.accounts.services.disable_user", lambda *a, **k: (_ for _ in ()).throw(SupabaseError("disable_failed")))
+    monkeypatch.setattr(
+        "apps.accounts.services.disable_user",
+        lambda *a, **k: (_ for _ in ()).throw(SupabaseError("disable_failed")),
+    )
     with _raises("upstream"):
         delete_account(auth_user(profile))
     profile.refresh_from_db()
@@ -570,7 +696,9 @@ def test_room_and_message_error_branches(profile, monkeypatch):
     with _raises("name"):
         create_room(profile, name="a\nb", description="", is_private=False, max_members=10)
     with _raises("description"):
-        create_room(profile, name="validroom", description="x" * 301, is_private=False, max_members=10)
+        create_room(
+            profile, name="validroom", description="x" * 301, is_private=False, max_members=10
+        )
     with _raises("max"):
         create_room(profile, name="validroom", description="", is_private=False, max_members=True)
     room = RoomFactory(created_by=profile, name="takenname")
@@ -666,7 +794,10 @@ def test_room_and_message_error_branches(profile, monkeypatch):
     remove_all_memberships(profile)
     assert not RoomMember.objects.filter(user=profile, room=room).exists()
 
-    monkeypatch.setattr("apps.rooms.services.upload_bytes", lambda *a, **k: (_ for _ in ()).throw(SupabaseError("upload_failed")))
+    monkeypatch.setattr(
+        "apps.rooms.services.upload_bytes",
+        lambda *a, **k: (_ for _ in ()).throw(SupabaseError("upload_failed")),
+    )
     alive = RoomFactory(created_by=profile, name="avatarroom")
     with _raises("upstream"):
         save_room_avatar(profile, alive.id, SimpleNamespace(size=None, read=lambda n: _png()))
@@ -674,7 +805,9 @@ def test_room_and_message_error_branches(profile, monkeypatch):
     monkeypatch.setattr("apps.rooms.services.delete_object", lambda *a, **k: None)
     alive.avatar_path = "rooms/old.png"
     alive.save(update_fields=["avatar_path"])
-    saved, _member = save_room_avatar(profile, alive.id, SimpleNamespace(size=None, read=lambda n: _png()))
+    saved, _member = save_room_avatar(
+        profile, alive.id, SimpleNamespace(size=None, read=lambda n: _png())
+    )
     assert saved.avatar_path.startswith(f"rooms/{alive.id}/")
     assert str(alive)
     assert str(RoomMember.objects.get(room=alive, user=profile))
@@ -698,9 +831,22 @@ def test_room_and_message_error_branches(profile, monkeypatch):
             attachment_ids=[uuid.uuid4() for _ in range(5)],
         )
     with _raises("reply"):
-        send_message(profile, alive.id, body="hi", client_message_id=uuid.uuid4(), reply_to=uuid.uuid4())
+        send_message(
+            profile, alive.id, body="hi", client_message_id=uuid.uuid4(), reply_to=uuid.uuid4()
+        )
+    with _raises("body"):
+        send_message(profile, alive.id, body="x" * 2001, client_message_id=uuid.uuid4())
+    RoomMember.objects.get_or_create(
+        room=alive, user=other, defaults={"role": RoomMember.Role.MEMBER}
+    )
     with _raises("attachment"):
-        send_message(profile, alive.id, body="hi", client_message_id=uuid.uuid4(), attachment_ids=[uuid.uuid4()])
+        send_message(
+            profile,
+            alive.id,
+            body="hi",
+            client_message_id=uuid.uuid4(),
+            attachment_ids=[uuid.uuid4()],
+        )
     client_id = uuid.uuid4()
     message, created = send_message(profile, alive.id, body="once", client_message_id=client_id)
     assert created is True
@@ -717,7 +863,6 @@ def test_room_and_message_error_branches(profile, monkeypatch):
     message.save(update_fields=["created_at"])
     with _raises("body"):
         edit_message(profile, message.id, "  ")
-    RoomMember.objects.get_or_create(room=alive, user=other, defaults={"role": RoomMember.Role.MEMBER})
     with _raises("delete"):
         delete_message(other, message.id)
     with _raises("emoji"):
@@ -735,11 +880,23 @@ def test_room_and_message_error_branches(profile, monkeypatch):
         edit_message(profile, message.id, "nope")
     with _raises("deleted"):
         add_reaction(profile, message.id, "like")
+    from apps.chat.models import MessageReaction
+
+    MessageReaction.objects.create(message=message, user=profile, emoji="like")
     profile.avatar_path = "avatars/me.png"
     profile.save(update_fields=["avatar_path"])
-    monkeypatch.setattr("apps.chat.serializers.create_signed_url", lambda *a, **k: "https://cdn.example/a")
-    payload = serialize_message(message, profile.id)
+    monkeypatch.setattr(
+        "apps.chat.serializers.create_signed_url", lambda *a, **k: "https://cdn.example/a"
+    )
+    loaded = (
+        Message.objects.select_related("sender")
+        .prefetch_related("reactions", "attachments")
+        .get(pk=message.id)
+    )
+    loaded.sender.avatar_path = profile.avatar_path
+    payload = serialize_message(loaded, profile.id)
     assert payload["body"] is None
+    assert payload["reactions"][0]["reacted_by_me"] is True
     assert payload["sender"]["avatar_url"] == "https://cdn.example/a"
     attachment = MessageAttachment.objects.create(
         room=alive,

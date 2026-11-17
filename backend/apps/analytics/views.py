@@ -29,6 +29,10 @@ class MessagesPerRoomView(BaseAPIView):
 class RoomStatsView(BaseAPIView):
     throttle_classes = [UserRateThrottle]
 
-    @documented("analytics", "Member count, message count, busiest hour and top senders", responses={200: None})
+    @documented(
+        "analytics",
+        "Member count, message count, busiest hour and top senders",
+        responses={200: None},
+    )
     def get(self, request, id):
         return Response(room_stats(request.user.profile, id))

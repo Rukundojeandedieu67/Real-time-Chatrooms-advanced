@@ -77,7 +77,9 @@ class RoomMember(UUIDModel):
 class RoomInvite(UUIDModel):
     room = models.ForeignKey(Room, on_delete=models.CASCADE, related_name="invites")
     code = models.CharField(max_length=64, unique=True)
-    created_by = models.ForeignKey(Profile, on_delete=models.PROTECT, related_name="invites_created")
+    created_by = models.ForeignKey(
+        Profile, on_delete=models.PROTECT, related_name="invites_created"
+    )
     expires_at = models.DateTimeField()
     max_uses = models.PositiveIntegerField()
     uses = models.PositiveIntegerField(default=0)
@@ -89,5 +91,7 @@ class RoomInvite(UUIDModel):
                 condition=models.Q(max_uses__gte=1, max_uses__lte=100),
                 name="invite_max_uses_range",
             ),
-            models.CheckConstraint(condition=models.Q(uses__gte=0), name="invite_uses_non_negative"),
+            models.CheckConstraint(
+                condition=models.Q(uses__gte=0), name="invite_uses_non_negative"
+            ),
         ]

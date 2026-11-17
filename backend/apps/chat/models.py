@@ -61,7 +61,9 @@ class MessageAttachment(UUIDModel):
                 condition=models.Q(content_type__in=["image/jpeg", "image/png", "image/webp"]),
                 name="attachment_content_type_valid",
             ),
-            models.CheckConstraint(condition=models.Q(size_bytes__gte=1), name="attachment_size_positive"),
+            models.CheckConstraint(
+                condition=models.Q(size_bytes__gte=1), name="attachment_size_positive"
+            ),
         ]
 
 

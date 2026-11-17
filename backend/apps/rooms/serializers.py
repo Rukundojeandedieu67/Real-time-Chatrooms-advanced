@@ -5,9 +5,13 @@ from apps.core.serializers import StrictSerializer
 
 class RoomWriteSerializer(StrictSerializer):
     name = serializers.CharField(min_length=3, max_length=60)
-    description = serializers.CharField(allow_blank=True, max_length=300, required=False, default="")
+    description = serializers.CharField(
+        allow_blank=True, max_length=300, required=False, default=""
+    )
     is_private = serializers.BooleanField(required=False, default=False)
-    max_members = serializers.IntegerField(required=False, min_value=1, max_value=10000, default=100)
+    max_members = serializers.IntegerField(
+        required=False, min_value=1, max_value=10000, default=100
+    )
 
 
 class RoomReplaceSerializer(StrictSerializer):
@@ -35,4 +39,6 @@ class RoleSerializer(StrictSerializer):
 
 class InviteSerializer(StrictSerializer):
     max_uses = serializers.IntegerField(required=False, min_value=1, max_value=100, default=10)
-    expires_in_hours = serializers.IntegerField(required=False, min_value=1, max_value=720, default=168)
+    expires_in_hours = serializers.IntegerField(
+        required=False, min_value=1, max_value=720, default=168
+    )

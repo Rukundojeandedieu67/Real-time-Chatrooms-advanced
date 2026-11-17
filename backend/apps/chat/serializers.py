@@ -1,10 +1,10 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from apps.chat.constants import ALLOWED_REACTIONS
 from apps.chat.services import attachment_payload
 from apps.core.serializers import StrictSerializer
 from services.supabase_storage import create_signed_url
-from django.conf import settings
 
 
 class SendMessageSerializer(StrictSerializer):
@@ -59,7 +59,9 @@ def serialize_message(message, viewer_id):
         "deleted": deleted,
         "reply_to": str(message.reply_to_id) if message.reply_to_id else None,
         "client_message_id": str(message.client_message_id),
-        "attachments": [] if deleted else [attachment_payload(item) for item in message.attachments.all()],
+        "attachments": []
+        if deleted
+        else [attachment_payload(item) for item in message.attachments.all()],
         "reactions": list(reactions.values()),
         "edited_at": message.edited_at,
         "created_at": message.created_at,

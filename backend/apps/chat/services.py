@@ -20,9 +20,13 @@ from services.supabase_storage import create_signed_url, delete_object, upload_b
 def list_messages(profile, room_id, *, before=None, limit=None, query=None):
     room, _member = require_room_member(room_id, profile, action="read")
     page_size = _page_size(limit)
-    queryset = Message.objects.filter(room=room).select_related("sender", "reply_to").prefetch_related(
-        "attachments",
-        "reactions",
+    queryset = (
+        Message.objects.filter(room=room)
+        .select_related("sender", "reply_to")
+        .prefetch_related(
+            "attachments",
+            "reactions",
+        )
     )
     if query:
         if len(query) > 100:

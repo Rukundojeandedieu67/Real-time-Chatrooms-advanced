@@ -97,7 +97,11 @@ def test_avatar_upload_and_guards(client, settings):
 
     gif = client.put(
         "/api/v1/users/me/avatar",
-        {"file": SimpleUploadedFile("anim.gif", b"GIF89a" + b"\x00" * 20, content_type="image/gif")},
+        {
+            "file": SimpleUploadedFile(
+                "anim.gif", b"GIF89a" + b"\x00" * 20, content_type="image/gif"
+            )
+        },
         format="multipart",
     )
     assert gif.status_code == 415

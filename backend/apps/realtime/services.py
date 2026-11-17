@@ -16,7 +16,9 @@ def set_typing(profile, room_id, *, is_typing):
         TypingState.objects.update_or_create(
             room=room,
             user=profile,
-            defaults={"expires_at": timezone.now() + timedelta(seconds=settings.TYPING_TTL_SECONDS)},
+            defaults={
+                "expires_at": timezone.now() + timedelta(seconds=settings.TYPING_TTL_SECONDS)
+            },
         )
     else:
         TypingState.objects.filter(room=room, user=profile).delete()

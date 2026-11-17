@@ -17,9 +17,8 @@ from apps.accounts.validators import (
 )
 from apps.core.exceptions import DomainError
 from apps.core.images import prepare_image, read_limited
-from services.supabase_auth import SupabaseError
-from services.supabase_auth import delete_user as delete_supabase_user
 from services.supabase_auth import (
+    SupabaseError,
     disable_user,
     logout,
     recover,
@@ -29,6 +28,7 @@ from services.supabase_auth import (
     sign_up,
     update_password,
 )
+from services.supabase_auth import delete_user as delete_supabase_user
 from services.supabase_storage import delete_object, upload_bytes
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,9 @@ def register(*, email, password, username, display_name):
     try:
         profile_id = uuid.UUID(created["user_id"])
     except ValueError as exc:
-        raise DomainError("upstream_unavailable", "Authentication service is unavailable", 503) from exc
+        raise DomainError(
+            "upstream_unavailable", "Authentication service is unavailable", 503
+        ) from exc
     try:
         profile = Profile.objects.create(
             id=profile_id,
@@ -235,7 +237,9 @@ def update_profile(profile, **fields):
 
 
 def save_avatar(profile, upload):
-    prepared = prepare_image(read_limited(upload, settings.AVATAR_MAX_BYTES), settings.AVATAR_MAX_BYTES)
+    prepared = prepare_image(
+        read_limited(upload, settings.AVATAR_MAX_BYTES), settings.AVATAR_MAX_BYTES
+    )
     path = f"{profile.id}/{uuid.uuid4().hex}.{prepared.ext}"
     try:
         upload_bytes(settings.SUPABASE_AVATAR_BUCKET, path, prepared.data, prepared.content_type)
@@ -260,7 +264,9 @@ def remove_avatar(profile):
 def search_profiles(term):
     term = (term or "").strip()
     if not term:
-        raise DomainError("validation_error", "search is required", 400, {"search": ["This field is required."]})
+        raise DomainError(
+            "validation_error", "search is required", 400, {"search": ["This field is required."]}
+        )
     if len(term) > 50:
         raise DomainError("validation_error", "search is too long", 400, {"search": ["Too long."]})
     return Profile.objects.filter(

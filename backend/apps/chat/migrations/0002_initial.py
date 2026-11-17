@@ -5,7 +5,6 @@ from django.db import migrations, models
 
 
 class Migration(migrations.Migration):
-
     initial = True
 
     dependencies = [
@@ -82,9 +81,7 @@ class Migration(migrations.Migration):
         ),
         migrations.AddIndex(
             model_name="message",
-            index=models.Index(
-                fields=["room", "-created_at"], name="message_room_created_idx"
-            ),
+            index=models.Index(fields=["room", "-created_at"], name="message_room_created_idx"),
         ),
         migrations.AddConstraint(
             model_name="message",
@@ -103,9 +100,7 @@ class Migration(migrations.Migration):
         migrations.AddConstraint(
             model_name="messageattachment",
             constraint=models.CheckConstraint(
-                condition=models.Q(
-                    ("content_type__in", ["image/jpeg", "image/png", "image/webp"])
-                ),
+                condition=models.Q(("content_type__in", ["image/jpeg", "image/png", "image/webp"])),
                 name="attachment_content_type_valid",
             ),
         ),

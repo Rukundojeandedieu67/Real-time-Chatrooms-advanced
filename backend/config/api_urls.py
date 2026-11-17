@@ -17,7 +17,13 @@ from apps.accounts.views import (
     UserSearchView,
 )
 from apps.analytics.views import MessagesPerRoomView, RoomStatsView
-from apps.chat.views import AttachmentView, MessageDetailView, MessageListView, ReactionView, ReadView
+from apps.chat.views import (
+    AttachmentView,
+    MessageDetailView,
+    MessageListView,
+    ReactionView,
+    ReadView,
+)
 from apps.core.views import HealthView
 from apps.realtime.views import HeartbeatView, PresenceView, TypingView
 from apps.rooms.views import (

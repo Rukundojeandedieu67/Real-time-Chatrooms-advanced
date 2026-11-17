@@ -230,7 +230,9 @@ def test_refresh_logout_forgot_reset_change_and_resend(api, client, profile):
     responses.add(responses.POST, "http://supabase.test/auth/v1/recover", status=200)
     known = api.post("/api/v1/auth/password/forgot", {"email": "user@example.com"}, format="json")
     responses.add(responses.POST, "http://supabase.test/auth/v1/recover", status=400)
-    unknown = api.post("/api/v1/auth/password/forgot", {"email": "ghost@example.com"}, format="json")
+    unknown = api.post(
+        "/api/v1/auth/password/forgot", {"email": "ghost@example.com"}, format="json"
+    )
     assert known.status_code == unknown.status_code == 202
     assert known.json() == unknown.json()
 

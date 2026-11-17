@@ -14,7 +14,12 @@ class TypingView(BaseAPIView):
             return [AnonRateThrottle(), UserRateThrottle(), TypingThrottle()]
         return [AnonRateThrottle(), UserRateThrottle()]
 
-    @documented("realtime", "Set typing state for about 5 seconds", request=TypingSerializer, responses={204: None})
+    @documented(
+        "realtime",
+        "Set typing state for about 5 seconds",
+        request=TypingSerializer,
+        responses={204: None},
+    )
     def post(self, request, id):
         serializer = TypingSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -29,7 +34,12 @@ class TypingView(BaseAPIView):
 class HeartbeatView(BaseAPIView):
     throttle_classes = [UserRateThrottle]
 
-    @documented("realtime", "Update last_seen_at and status", request=HeartbeatSerializer, responses={200: None})
+    @documented(
+        "realtime",
+        "Update last_seen_at and status",
+        request=HeartbeatSerializer,
+        responses={200: None},
+    )
     def post(self, request):
         serializer = HeartbeatSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -40,6 +50,8 @@ class HeartbeatView(BaseAPIView):
 class PresenceView(BaseAPIView):
     throttle_classes = [UserRateThrottle]
 
-    @documented("realtime", "Online and away members seen inside the presence window", responses={200: None})
+    @documented(
+        "realtime", "Online and away members seen inside the presence window", responses={200: None}
+    )
     def get(self, request, id):
         return Response({"results": room_presence(request.user.profile, id)})

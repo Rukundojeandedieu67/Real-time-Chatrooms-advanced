@@ -81,7 +81,13 @@ class RegisterView(BaseAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle, RegisterRateThrottle]
 
-    @documented("auth", "Create an account", request=RegisterSerializer, responses={201: None, 409: None}, auth=False)
+    @documented(
+        "auth",
+        "Create an account",
+        request=RegisterSerializer,
+        responses={201: None, 409: None},
+        auth=False,
+    )
     def post(self, request):
         serializer = RegisterSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -112,7 +118,13 @@ class RefreshView(BaseAPIView):
     permission_classes = [AllowAny]
     throttle_classes = [AnonRateThrottle]
 
-    @documented("auth", "Exchange a refresh token", request=RefreshSerializer, responses={200: None}, auth=False)
+    @documented(
+        "auth",
+        "Exchange a refresh token",
+        request=RefreshSerializer,
+        responses={200: None},
+        auth=False,
+    )
     def post(self, request):
         serializer = RefreshSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -168,7 +180,12 @@ class ResetPasswordView(BaseAPIView):
 class ChangePasswordView(BaseAPIView):
     throttle_classes = [UserRateThrottle, PasswordRateThrottle]
 
-    @documented("auth", "Change the password of the signed-in user", request=ChangePasswordSerializer, responses={204: None})
+    @documented(
+        "auth",
+        "Change the password of the signed-in user",
+        request=ChangePasswordSerializer,
+        responses={204: None},
+    )
     def post(self, request):
         serializer = ChangePasswordSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -201,14 +218,24 @@ class MeView(BaseAPIView):
     def get(self, request):
         return Response(ProfileSerializer(request.user.profile).data)
 
-    @documented("profiles", "Replace profile fields", request=ProfileReplaceSerializer, responses={200: ProfileSerializer})
+    @documented(
+        "profiles",
+        "Replace profile fields",
+        request=ProfileReplaceSerializer,
+        responses={200: ProfileSerializer},
+    )
     def put(self, request):
         serializer = ProfileReplaceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         profile = replace_profile(request.user.profile, **serializer.validated_data)
         return Response(ProfileSerializer(profile).data)
 
-    @documented("profiles", "Update some profile fields", request=ProfilePatchSerializer, responses={200: ProfileSerializer})
+    @documented(
+        "profiles",
+        "Update some profile fields",
+        request=ProfilePatchSerializer,
+        responses={200: ProfileSerializer},
+    )
     def patch(self, request):
         serializer = ProfilePatchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -256,7 +283,9 @@ class UserSearchView(BaseAPIView):
         "profiles",
         "Search users by username or display name",
         parameters=[
-            OpenApiParameter(name="search", type=str, location=OpenApiParameter.QUERY, required=True),
+            OpenApiParameter(
+                name="search", type=str, location=OpenApiParameter.QUERY, required=True
+            ),
         ],
         responses={200: ProfileSerializer},
     )

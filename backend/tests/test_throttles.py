@@ -74,16 +74,22 @@ def test_message_typing_upload_and_user_throttles(client, profile, settings):
 
     cache.clear()
     _rates(settings, typing="1/minute", user="100/minute")
-    assert client.post(
-        f"/api/v1/rooms/{room.id}/typing",
-        {"is_typing": True},
-        format="json",
-    ).status_code == 204
-    assert client.post(
-        f"/api/v1/rooms/{room.id}/typing",
-        {"is_typing": True},
-        format="json",
-    ).status_code == 429
+    assert (
+        client.post(
+            f"/api/v1/rooms/{room.id}/typing",
+            {"is_typing": True},
+            format="json",
+        ).status_code
+        == 204
+    )
+    assert (
+        client.post(
+            f"/api/v1/rooms/{room.id}/typing",
+            {"is_typing": True},
+            format="json",
+        ).status_code
+        == 429
+    )
 
     cache.clear()
     _rates(settings, upload="1/minute", user="100/minute")

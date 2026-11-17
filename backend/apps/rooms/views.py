@@ -64,7 +64,12 @@ class RoomListView(BaseAPIView):
             [room_card(room, request.user.profile) for room in page]
         )
 
-    @documented("rooms", "Create a room. The creator becomes the owner.", request=RoomWriteSerializer, responses={201: None})
+    @documented(
+        "rooms",
+        "Create a room. The creator becomes the owner.",
+        request=RoomWriteSerializer,
+        responses={201: None},
+    )
     def post(self, request):
         serializer = RoomWriteSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -75,19 +80,27 @@ class RoomListView(BaseAPIView):
 class RoomDetailView(BaseAPIView):
     throttle_classes = [UserRateThrottle]
 
-    @documented("rooms", "Room detail. Public rooms are visible to any signed-in user.", responses={200: None})
+    @documented(
+        "rooms",
+        "Room detail. Public rooms are visible to any signed-in user.",
+        responses={200: None},
+    )
     def get(self, request, id):
         room, member = get_room_for_viewer(id, request.user.profile)
         return Response(room_detail(room, member))
 
-    @documented("rooms", "Replace room fields", request=RoomReplaceSerializer, responses={200: None})
+    @documented(
+        "rooms", "Replace room fields", request=RoomReplaceSerializer, responses={200: None}
+    )
     def put(self, request, id):
         serializer = RoomReplaceSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         room, member = update_room(request.user.profile, id, serializer.validated_data)
         return Response(room_detail(room, member))
 
-    @documented("rooms", "Update some room fields", request=RoomPatchSerializer, responses={200: None})
+    @documented(
+        "rooms", "Update some room fields", request=RoomPatchSerializer, responses={200: None}
+    )
     def patch(self, request, id):
         serializer = RoomPatchSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -121,7 +134,9 @@ class JoinRoomView(BaseAPIView):
 class LeaveRoomView(BaseAPIView):
     throttle_classes = [UserRateThrottle]
 
-    @documented("rooms", "Leave a room. Ownership transfers or the room is archived.", responses={204: None})
+    @documented(
+        "rooms", "Leave a room. Ownership transfers or the room is archived.", responses={204: None}
+    )
     def post(self, request, id):
         leave_room(request.user.profile, id)
         return Response(status=204)
@@ -141,7 +156,12 @@ class MemberListView(BaseAPIView):
 class MemberDetailView(BaseAPIView):
     throttle_classes = [UserRateThrottle]
 
-    @documented("rooms", "Change a member's role. Owner only.", request=RoleSerializer, responses={200: None})
+    @documented(
+        "rooms",
+        "Change a member's role. Owner only.",
+        request=RoleSerializer,
+        responses={200: None},
+    )
     def patch(self, request, id, user_id):
         serializer = RoleSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)

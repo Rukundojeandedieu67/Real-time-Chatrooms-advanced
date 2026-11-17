@@ -7,7 +7,11 @@ from apps.core.exceptions import DomainError
 
 _JPEG = b"\xff\xd8\xff"
 _PNG = b"\x89PNG\r\n\x1a\n"
-_ALLOWED = {"JPEG": ("image/jpeg", "jpg"), "PNG": ("image/png", "png"), "WEBP": ("image/webp", "webp")}
+_ALLOWED = {
+    "JPEG": ("image/jpeg", "jpg"),
+    "PNG": ("image/png", "png"),
+    "WEBP": ("image/webp", "webp"),
+}
 
 
 class PreparedImage:
@@ -27,7 +31,9 @@ def read_limited(upload, max_bytes):
     if len(data) > max_bytes:
         raise DomainError("file_too_large", "Upload exceeds the size limit", 413)
     if not data:
-        raise DomainError("validation_error", "file is empty", 400, {"file": ["This field is required."]})
+        raise DomainError(
+            "validation_error", "file is empty", 400, {"file": ["This field is required."]}
+        )
     return data
 
 
