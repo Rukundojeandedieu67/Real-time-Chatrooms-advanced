@@ -1,9 +1,8 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Users, Lock, Globe, ArrowRight, Check } from 'lucide-react';
 import { useRooms } from '../../context/RoomContext';
 
-export const RoomCard = ({ room, onOpenSettings }) => {
+export const RoomCard = ({ room }) => {
   const navigate = useNavigate();
   const { joinRoom, leaveRoom } = useRooms();
 
@@ -29,8 +28,12 @@ export const RoomCard = ({ room, onOpenSettings }) => {
         {/* Card Header */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-3">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600/30 to-violet-600/30 border border-white/10 flex items-center justify-center text-xl shadow-inner group-hover:scale-105 transition-transform">
-              {room.avatar || '💬'}
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600/30 to-violet-600/30 border border-white/10 flex items-center justify-center text-xl shadow-inner group-hover:scale-105 transition-transform overflow-hidden">
+              {room.avatarUrl ? (
+                <img src={room.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                room.avatar || '💬'
+              )}
             </div>
             <div>
               <div className="flex items-center gap-1.5">

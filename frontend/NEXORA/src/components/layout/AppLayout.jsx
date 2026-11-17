@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import { AppSidebar } from './AppSidebar';
 import { TopBar } from './TopBar';
@@ -22,8 +22,8 @@ export const AppLayout = () => {
     }
     if (path.startsWith('/chat')) {
       return {
-        title: 'Direct Messages & Groups',
-        subtitle: 'High-speed messaging channels with simulated real-time telemetry'
+        title: 'Rooms',
+        subtitle: 'Messages in the rooms you have joined'
       };
     }
     if (path.startsWith('/rooms')) {

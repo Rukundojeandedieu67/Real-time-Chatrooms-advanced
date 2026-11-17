@@ -1,4 +1,3 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AtSign, Heart, UserPlus, ShieldAlert, Check, Trash2, ArrowRight } from 'lucide-react';
 import { UserAvatar } from '../common/UserAvatar';

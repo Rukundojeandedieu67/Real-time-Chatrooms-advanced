@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { SmilePlus } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { useAuth } from '../../context/AuthContext';

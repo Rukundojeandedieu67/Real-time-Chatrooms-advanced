@@ -1,16 +1,9 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-  User,
   MapPin,
   Calendar,
   Mail,
-  Shield,
-  Edit3,
-  Camera,
-  Check,
-  Lock,
-  Eye,
-  Radio
+  Edit3
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { UserAvatar } from '../../components/common/UserAvatar';
@@ -114,7 +107,7 @@ export const ProfilePage = () => {
               Active Presence
             </h3>
             <div className="grid grid-cols-2 gap-2">
-              {['online', 'away', 'busy', 'offline'].map((status) => (
+              {['online', 'away', 'offline'].map((status) => (
                 <button
                   key={status}
                   onClick={() => updatePresence(status)}
@@ -130,8 +123,6 @@ export const ProfilePage = () => {
                         ? 'bg-emerald-500'
                         : status === 'away'
                         ? 'bg-amber-500'
-                        : status === 'busy'
-                        ? 'bg-rose-500'
                         : 'bg-slate-500'
                     }`}
                   />
@@ -184,15 +175,15 @@ export const ProfilePage = () => {
           {/* Activity Statistics */}
           <div className="grid grid-cols-3 gap-3">
             <div className="p-4 rounded-2xl bg-[#121522]/60 border border-[#23293e] text-center">
-              <p className="text-xl font-extrabold text-blue-400">{user?.stats?.roomsJoined || 8}</p>
+              <p className="text-xl font-extrabold text-blue-400">{user?.stats?.roomsJoined ?? '—'}</p>
               <span className="text-[11px] text-slate-400 mt-1 block">Rooms Joined</span>
             </div>
             <div className="p-4 rounded-2xl bg-[#121522]/60 border border-[#23293e] text-center">
-              <p className="text-xl font-extrabold text-violet-400">{user?.stats?.messagesSent || 1420}</p>
+              <p className="text-xl font-extrabold text-violet-400">{user?.stats?.messagesSent ?? '—'}</p>
               <span className="text-[11px] text-slate-400 mt-1 block">Messages Sent</span>
             </div>
             <div className="p-4 rounded-2xl bg-[#121522]/60 border border-[#23293e] text-center">
-              <p className="text-xl font-extrabold text-emerald-400">{user?.stats?.reactionsGiven || 390}</p>
+              <p className="text-xl font-extrabold text-emerald-400">{user?.stats?.reactionsGiven ?? '—'}</p>
               <span className="text-[11px] text-slate-400 mt-1 block">Reactions Given</span>
             </div>
           </div>

@@ -1,18 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { FormField } from '../common/FormField';
 import { useRooms } from '../../context/RoomContext';
-import { Hash, Lock, Globe, Sparkles } from 'lucide-react';
+import { Lock, Globe, Sparkles } from 'lucide-react';
 
 export const CreateRoomModal = ({ isOpen, onClose }) => {
-  const { categories, createRoom } = useRooms();
+  const { createRoom } = useRooms();
 
   const [formData, setFormData] = useState({
     name: '',
-    title: '',
-    category: categories[1] || 'AI & Robotics',
     description: '',
-    topic: '',
     isPrivate: false
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -37,15 +34,15 @@ export const CreateRoomModal = ({ isOpen, onClose }) => {
 
     setIsSubmitting(true);
     try {
-      await createRoom(formData);
+      await createRoom({
+        name: formData.name,
+        description: formData.description,
+        isPrivate: formData.isPrivate
+      });
       onClose();
-      // Reset form
       setFormData({
         name: '',
-        title: '',
-        category: categories[1] || 'AI & Robotics',
         description: '',
-        topic: '',
         isPrivate: false
       });
     } catch (err) {
@@ -71,7 +68,7 @@ export const CreateRoomModal = ({ isOpen, onClose }) => {
         )}
 
         {/* Room Name */}
-        <FormField label="Room Handle / Slug" required helperText="Lowercase, alphanumeric with hyphens (e.g. quantum-algorithms)">
+        <FormField label="Room name" required helperText="3 to 60 characters. This is the name members see.">
           <div className="relative">
             <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-mono text-sm">#</span>
             <input
@@ -79,43 +76,13 @@ export const CreateRoomModal = ({ isOpen, onClose }) => {
               name="name"
               value={formData.name}
               onChange={handleChange}
-              placeholder="distributed-consensus"
+              placeholder="General"
               className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/50 py-2.5 pl-8 pr-3.5 text-sm"
               required
             />
           </div>
         </FormField>
 
-        {/* Room Title */}
-        <FormField label="Display Title" required>
-          <input
-            type="text"
-            name="title"
-            value={formData.title}
-            onChange={handleChange}
-            placeholder="Distributed Consensus & Raft Protocols"
-            className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/50 py-2.5 px-3.5 text-sm"
-            required
-          />
-        </FormField>
-
-        {/* Category */}
-        <FormField label="Category" required>
-          <select
-            name="category"
-            value={formData.category}
-            onChange={handleChange}
-            className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 focus:outline-none focus:border-blue-500/80 py-2.5 px-3.5 text-sm"
-          >
-            {categories.filter(c => c !== 'All').map((cat) => (
-              <option key={cat} value={cat} className="bg-[#121522] text-white">
-                {cat}
-              </option>
-            ))}
-          </select>
-        </FormField>
-
-        {/* Description */}
         <FormField label="Description">
           <textarea
             name="description"
@@ -127,19 +94,6 @@ export const CreateRoomModal = ({ isOpen, onClose }) => {
           />
         </FormField>
 
-        {/* Topic Header */}
-        <FormField label="Initial Topic / Header Notice">
-          <input
-            type="text"
-            name="topic"
-            value={formData.topic}
-            onChange={handleChange}
-            placeholder="e.g. Discussing state machine replication latency"
-            className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500/80 py-2.5 px-3.5 text-sm"
-          />
-        </FormField>
-
-        {/* Privacy Selector */}
         <div className="p-3.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-lg ${formData.isPrivate ? 'bg-amber-500/10 text-amber-400' : 'bg-blue-500/10 text-blue-400'}`}>

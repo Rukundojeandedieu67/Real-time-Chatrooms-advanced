@@ -1,17 +1,17 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, ArrowRight, ShieldCheck, Info } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { FormField } from '../../components/common/FormField';
 import { PasswordInput } from '../../components/common/PasswordInput';
 import { useAuth } from '../../context/AuthContext';
 
 export const LoginPage = () => {
-  const { login, isLoading } = useAuth();
+  const { login, isSubmitting } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    email: 'alex.rivera@nexora.io',
-    password: 'password123',
+    email: '',
+    password: '',
     rememberMe: true
   });
   const [error, setError] = useState('');
@@ -39,14 +39,6 @@ export const LoginPage = () => {
     }
   };
 
-  const handleUseDemo = () => {
-    setFormData({
-      email: 'alex.rivera@nexora.io',
-      password: 'password123',
-      rememberMe: true
-    });
-  };
-
   return (
     <div className="min-h-screen bg-[#0a0b10] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative overflow-hidden select-none">
       {/* Background ambient glow circles */}
@@ -65,17 +57,6 @@ export const LoginPage = () => {
       {/* Card */}
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
         <div className="glass-dropdown py-8 px-6 sm:px-10 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-xl space-y-6">
-          {/* Simulated Mode Banner */}
-          <div className="p-3 rounded-2xl bg-blue-950/30 border border-blue-500/20 flex items-start gap-2.5 text-xs text-blue-300/90 leading-relaxed">
-            <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold text-blue-200">Frontend Simulation Mode</span>
-              <p className="text-[11px] text-blue-300/80 mt-0.5">
-                Authentication runs locally via mock services. Ready for later Django REST integration.
-              </p>
-            </div>
-          </div>
-
           {error && (
             <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400">
               {error}
@@ -127,25 +108,13 @@ export const LoginPage = () => {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-semibold text-sm shadow-xl shadow-blue-600/30 transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              <span>{isLoading ? 'Authenticating...' : 'Sign In'}</span>
+              <span>{isSubmitting ? 'Authenticating...' : 'Sign In'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
-
-          {/* Quick Demo Credentials shortcut */}
-          <div className="pt-2">
-            <button
-              type="button"
-              onClick={handleUseDemo}
-              className="w-full py-2 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs text-slate-300 hover:text-white transition-all text-center flex items-center justify-center gap-2"
-            >
-              <ShieldCheck className="w-3.5 h-3.5 text-blue-400" />
-              <span>Autofill Demo Credentials (Alex Rivera)</span>
-            </button>
-          </div>
 
           <div className="text-center pt-2 border-t border-white/5">
             <p className="text-xs text-slate-400">

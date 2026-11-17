@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
-import { Search, Bell, Plus, Sparkles, Menu, Shield } from 'lucide-react';
+import { useState } from 'react';
+import { Search, Bell, Plus, Shield } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useNotifications } from '../../context/NotificationContext';
 import { useAuth } from '../../context/AuthContext';
 import { UserAvatar } from '../common/UserAvatar';
 
-export const TopBar = ({ title, subtitle, onOpenQuickAction, onOpenCreateRoom, onOpenSearch }) => {
+export const TopBar = ({ title, subtitle, onOpenCreateRoom, onOpenSearch }) => {
   const { notifications, unreadCount, markAsRead } = useNotifications();
   const { user } = useAuth();
   const [showNotifPreview, setShowNotifPreview] = useState(false);

@@ -1,17 +1,15 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Modal } from '../common/Modal';
 import { FormField } from '../common/FormField';
 import { useRooms } from '../../context/RoomContext';
-import { Settings, Save, Shield } from 'lucide-react';
+import { Save } from 'lucide-react';
 
 export const RoomSettingsModal = ({ isOpen, onClose, room }) => {
   const { updateRoom } = useRooms();
 
   const [formData, setFormData] = useState({
-    title: room?.title || '',
-    topic: room?.topic || '',
-    description: room?.description || '',
-    rules: room?.rules?.join('\n') || ''
+    title: room?.name || '',
+    description: room?.description || ''
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -27,10 +25,8 @@ export const RoomSettingsModal = ({ isOpen, onClose, room }) => {
     setIsSubmitting(true);
     try {
       await updateRoom(room.id, {
-        title: formData.title,
-        topic: formData.topic,
-        description: formData.description,
-        rules: formData.rules.split('\n').filter((r) => r.trim().length > 0)
+        name: formData.title,
+        description: formData.description
       });
       onClose();
     } catch (err) {
@@ -49,7 +45,7 @@ export const RoomSettingsModal = ({ isOpen, onClose, room }) => {
       maxWidth="max-w-lg"
     >
       <form onSubmit={handleSubmit} className="space-y-4">
-        <FormField label="Display Title" required>
+        <FormField label="Room name" required>
           <input
             type="text"
             name="title"
@@ -60,33 +56,13 @@ export const RoomSettingsModal = ({ isOpen, onClose, room }) => {
           />
         </FormField>
 
-        <FormField label="Current Topic / Pinned Announcement">
-          <input
-            type="text"
-            name="topic"
-            value={formData.topic}
-            onChange={handleChange}
-            className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 py-2 px-3 text-sm focus:outline-none focus:border-blue-500"
-          />
-        </FormField>
-
-        <FormField label="Channel Description">
+        <FormField label="Description">
           <textarea
             name="description"
             rows={2}
             value={formData.description}
             onChange={handleChange}
             className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 py-2 px-3 text-sm focus:outline-none focus:border-blue-500 resize-none"
-          />
-        </FormField>
-
-        <FormField label="Channel Rules (One per line)">
-          <textarea
-            name="rules"
-            rows={3}
-            value={formData.rules}
-            onChange={handleChange}
-            className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 py-2 px-3 text-sm font-mono focus:outline-none focus:border-blue-500 resize-none"
           />
         </FormField>
 

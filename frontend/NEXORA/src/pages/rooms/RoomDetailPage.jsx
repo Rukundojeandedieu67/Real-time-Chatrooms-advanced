@@ -1,15 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
   Users,
-  Lock,
-  Globe,
   Settings,
-  Info,
-  Check,
-  Shield,
-  MessageSquare
+  Check
 } from 'lucide-react';
 import { useRooms } from '../../context/RoomContext';
 import { useAuth } from '../../context/AuthContext';
@@ -43,13 +38,20 @@ export const RoomDetailPage = () => {
       setIsLoading(true);
       try {
         const foundRoom = await roomService.getRoom(roomId);
-        if (isMounted && foundRoom) {
-          setRoom(foundRoom);
-          const roomMembers = await roomService.getRoomMembers(foundRoom.id);
-          setMembers(roomMembers);
-          const roomMsgs = await chatService.getMessages(foundRoom.id);
-          setMessages(roomMsgs);
+        if (!isMounted || !foundRoom) return;
+        setRoom(foundRoom);
+        if (!foundRoom.isJoined) {
+          setMembers([]);
+          setMessages([]);
+          return;
         }
+        const [roomMembers, roomMsgs] = await Promise.all([
+          roomService.getRoomMembers(foundRoom.id),
+          chatService.getMessages(foundRoom.id, user?.id),
+        ]);
+        if (!isMounted) return;
+        setMembers(roomMembers);
+        setMessages(roomMsgs);
       } catch (err) {
         console.error(err);
       } finally {
@@ -58,11 +60,22 @@ export const RoomDetailPage = () => {
     };
 
     loadData();
+    const timer = setInterval(async () => {
+      try {
+        const latest = await roomService.getRoom(roomId);
+        if (!isMounted || !latest?.isJoined) return;
+        const roomMsgs = await chatService.getMessages(roomId, user?.id);
+        if (isMounted) setMessages(roomMsgs);
+      } catch {
+        /* keep the last good history */
+      }
+    }, 4000);
 
     return () => {
       isMounted = false;
+      clearInterval(timer);
     };
-  }, [roomId, rooms]);
+  }, [roomId, rooms, user?.id]);
 
   if (isLoading) {
     return (
@@ -94,7 +107,7 @@ export const RoomDetailPage = () => {
       replyTo,
       sender: user
     });
-    setMessages((prev) => [...prev, newMsg]);
+    setMessages((prev) => (prev.some((item) => item.id === newMsg.id) ? prev : [...prev, newMsg]));
   };
 
   const handleToggleJoin = async () => {
@@ -120,8 +133,12 @@ export const RoomDetailPage = () => {
               <ArrowLeft className="w-4 h-4" />
             </button>
 
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600/30 to-violet-600/30 border border-white/10 flex items-center justify-center text-lg shrink-0">
-              {room.avatar || '💬'}
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600/30 to-violet-600/30 border border-white/10 flex items-center justify-center text-lg shrink-0 overflow-hidden">
+              {room.avatarUrl ? (
+                <img src={room.avatarUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                room.avatar || '💬'
+              )}
             </div>
 
             <div className="min-w-0">
@@ -183,14 +200,9 @@ export const RoomDetailPage = () => {
 
         {/* Room Topic Announcement Banner */}
         {room.topic && (
-          <div className="px-6 py-2 bg-gradient-to-r from-blue-950/30 via-indigo-950/20 to-transparent border-b border-blue-500/15 flex items-center justify-between text-xs text-blue-300">
-            <div className="flex items-center gap-2 truncate">
-              <span className="font-bold text-white shrink-0">Topic:</span>
-              <span className="truncate">{room.topic}</span>
-            </div>
-            <span className="text-[10px] text-slate-400 shrink-0 ml-2 hidden sm:inline">
-              Category: {room.category}
-            </span>
+          <div className="px-6 py-2 bg-gradient-to-r from-blue-950/30 via-indigo-950/20 to-transparent border-b border-blue-500/15 flex items-center gap-2 text-xs text-blue-300">
+            <span className="font-bold text-white shrink-0">Topic:</span>
+            <span className="truncate">{room.topic}</span>
           </div>
         )}
 
@@ -199,29 +211,17 @@ export const RoomDetailPage = () => {
           messages={messages}
           isLoading={false}
           onReply={(msg) => setReplyingTo(msg)}
-          onEdit={(id, text) => {
-            chatService.editMessage({ conversationId: room.id, messageId: id, newText: text });
-            setMessages((prev) => prev.map((m) => (m.id === id ? { ...m, text, edited: true } : m)));
+          onEdit={async (id, text) => {
+            const updated = await chatService.editMessage({ messageId: id, newText: text, senderId: user?.id });
+            setMessages((prev) => prev.map((item) => (item.id === id ? updated : item)));
           }}
-          onDelete={(id) => {
-            chatService.deleteMessage({ conversationId: room.id, messageId: id });
-            setMessages((prev) => prev.filter((m) => m.id !== id));
+          onDelete={async (id) => {
+            const updated = await chatService.deleteMessage({ messageId: id, senderId: user?.id });
+            setMessages((prev) => prev.map((item) => (item.id === id ? updated : item)));
           }}
-          onToggleReaction={(id, emoji) => {
-            chatService.toggleReaction({ conversationId: room.id, messageId: id, emoji, userId: user?.id });
-            setMessages((prev) =>
-              prev.map((m) => {
-                if (m.id !== id) return m;
-                const reactions = [...(m.reactions || [])];
-                const existing = reactions.find((r) => r.emoji === emoji);
-                if (existing) {
-                  existing.count += 1;
-                } else {
-                  reactions.push({ emoji, count: 1, users: [user?.id] });
-                }
-                return { ...m, reactions };
-              })
-            );
+          onToggleReaction={async (id, emoji) => {
+            const updated = await chatService.toggleReaction({ messageId: id, emoji, userId: user?.id });
+            setMessages((prev) => prev.map((item) => (item.id === id ? updated : item)));
           }}
         />
 

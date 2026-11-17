@@ -1,5 +1,5 @@
-import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
 import { AuthProvider } from './context/AuthContext';
 import { ChatProvider } from './context/ChatContext';
@@ -25,6 +25,19 @@ import { NotificationsPage } from './pages/notifications/NotificationsPage';
 import { ProfilePage } from './pages/profile/ProfilePage';
 import { SettingsPage } from './pages/settings/SettingsPage';
 
+function RequireAuth() {
+  const { isAuthenticated, isLoading } = useAuth();
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#0a0b10] flex items-center justify-center text-sm text-slate-400">
+        Loading session...
+      </div>
+    );
+  }
+  if (!isAuthenticated) return <Navigate to="/login" replace />;
+  return <AppLayout />;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -42,7 +55,7 @@ function App() {
                   <Route path="/verify-email" element={<EmailVerificationPage />} />
 
                   {/* Main Application Layout Routes */}
-                  <Route element={<AppLayout />}>
+                  <Route element={<RequireAuth />}>
                     <Route path="/" element={<Navigate to="/dashboard" replace />} />
                     <Route path="/dashboard" element={<DashboardPage />} />
                     <Route path="/chat" element={<ChatPage />} />

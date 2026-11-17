@@ -1,32 +1,43 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect } from 'react';
 import { notificationService } from '../services/notification.service';
 import { useToast } from './ToastContext';
 
 const NotificationContext = createContext(null);
 
 export const NotificationProvider = ({ children }) => {
+  const { addToast } = useToast();
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const { addToast } = useToast();
-
-  const fetchNotifications = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await notificationService.getNotifications();
-      setNotifications(data);
-      const count = await notificationService.getUnreadCount();
-      setUnreadCount(count);
-    } catch (err) {
-      console.error('Failed to load notifications', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+    let active = true;
+    notificationService
+      .getNotifications()
+      .then(async (data) => {
+        if (!active) return;
+        setNotifications(data);
+        const count = await notificationService.getUnreadCount();
+        if (!active) return;
+        setUnreadCount(count);
+        setLoaded(true);
+      })
+      .catch((err) => {
+        console.error('Failed to load notifications', err);
+        if (active) setLoaded(true);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  const refreshNotifications = async () => {
+    const data = await notificationService.getNotifications();
+    setNotifications(data);
+    const count = await notificationService.getUnreadCount();
+    setUnreadCount(count);
+    setLoaded(true);
+  };
 
   const markAsRead = async (id) => {
     try {
@@ -69,11 +80,11 @@ export const NotificationProvider = ({ children }) => {
       value={{
         notifications,
         unreadCount,
-        isLoading,
+        isLoading: !loaded,
         markAsRead,
         markAllAsRead,
         deleteNotification,
-        refreshNotifications: fetchNotifications
+        refreshNotifications
       }}
     >
       {children}

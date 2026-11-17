@@ -1,4 +1,3 @@
-import React from 'react';
 import { Pin } from 'lucide-react';
 import { UserAvatar } from '../common/UserAvatar';
 

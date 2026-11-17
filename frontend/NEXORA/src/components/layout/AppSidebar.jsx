@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import {
   MessageSquare,
@@ -10,8 +10,7 @@ import {
   LogOut,
   ChevronDown,
   Sparkles,
-  Plus,
-  ShieldAlert
+  Plus
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useNotifications } from '../../context/NotificationContext';

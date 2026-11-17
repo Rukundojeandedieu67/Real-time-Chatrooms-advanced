@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Sparkles, ArrowLeft, Send, CheckCircle2, Info } from 'lucide-react';
 import { FormField } from '../../components/common/FormField';

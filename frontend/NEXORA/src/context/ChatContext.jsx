@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { chatService } from '../services/chat.service';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
@@ -6,194 +6,171 @@ import { useToast } from './ToastContext';
 const ChatContext = createContext(null);
 
 export const ChatProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   const { addToast } = useToast();
 
   const [conversations, setConversations] = useState([]);
-  const [activeConversationId, setActiveConversationId] = useState('conv_dm_001');
+  const [activeConversationId, setActiveConversationId] = useState(null);
   const [messages, setMessages] = useState([]);
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
+  const [loadedRoomId, setLoadedRoomId] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [typingName, setTypingName] = useState('');
+  const [typingRoomId, setTypingRoomId] = useState(null);
 
-  // Load conversations on mount
   const loadConversations = useCallback(async () => {
+    if (!isAuthenticated) return;
     try {
       const data = await chatService.getConversations();
       setConversations(data);
+      setActiveConversationId((current) => current || data[0]?.id || null);
     } catch (err) {
-      console.error('Failed to load conversations:', err);
+      console.error('Failed to load rooms', err);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    loadConversations();
-  }, [loadConversations]);
+    if (!isAuthenticated) return undefined;
+    let active = true;
+    chatService
+      .getConversations()
+      .then((data) => {
+        if (!active) return;
+        setConversations(data);
+        setActiveConversationId((current) => current || data[0]?.id || null);
+      })
+      .catch((err) => console.error('Failed to load rooms', err));
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated]);
 
-  // Load messages whenever activeConversationId changes
   useEffect(() => {
-    if (!activeConversationId) return;
+    if (!activeConversationId || !isAuthenticated) return undefined;
 
-    let isMounted = true;
-    const fetchMessages = async () => {
-      setIsLoadingMessages(true);
+    let active = true;
+    const roomId = activeConversationId;
+    const fetchMessages = async (silent = false) => {
       try {
-        const msgs = await chatService.getMessages(activeConversationId);
-        if (isMounted) {
-          setMessages(msgs);
-          await chatService.markAsRead(activeConversationId);
-          // Update conversation unread indicator locally
-          setConversations(prev =>
-            prev.map(c => c.id === activeConversationId ? { ...c, unreadCount: 0 } : c)
+        const msgs = await chatService.getMessages(roomId, user?.id);
+        if (!active) return;
+        setMessages(msgs);
+        setLoadedRoomId(roomId);
+        const latest = msgs[msgs.length - 1];
+        if (latest && !silent) {
+          chatService.markAsRead(roomId, latest.id).catch(() => {});
+          setConversations((prev) =>
+            prev.map((item) => (item.id === roomId ? { ...item, unreadCount: 0 } : item))
           );
         }
+        const typing = await chatService.getTyping(roomId);
+        if (!active) return;
+        const others = typing.filter((item) => item.user_id !== user?.id);
+        setIsTyping(others.length > 0);
+        setTypingName(others[0]?.display_name || '');
+        setTypingRoomId(roomId);
       } catch (err) {
-        console.error('Failed to load messages:', err);
-      } finally {
-        if (isMounted) setIsLoadingMessages(false);
+        if (!silent) console.error('Failed to load messages', err);
+        if (active) setLoadedRoomId(roomId);
       }
     };
 
     fetchMessages();
-
+    const timer = setInterval(() => fetchMessages(true), 4000);
     return () => {
-      isMounted = false;
+      active = false;
+      clearInterval(timer);
     };
-  }, [activeConversationId]);
+  }, [activeConversationId, isAuthenticated, user?.id]);
 
-  // Get currently active conversation object
-  const activeConversation = conversations.find(c => c.id === activeConversationId) || null;
+  const activeConversation = (isAuthenticated ? conversations : []).find((item) => item.id === activeConversationId) || null;
+  const visibleMessages = loadedRoomId === activeConversationId ? messages : [];
+  const visibleTyping = typingRoomId === activeConversationId && isTyping;
 
-  // Send message
   const sendMessage = async ({ text, attachments = [], replyTo = null }) => {
     if (!activeConversationId) return null;
     if (!text?.trim() && attachments.length === 0) return null;
-
     try {
       const newMsg = await chatService.sendMessage({
         conversationId: activeConversationId,
         text: text?.trim(),
         attachments,
         replyTo,
-        sender: user
+        sender: user,
       });
-
-      setMessages(prev => [...prev, newMsg]);
-
-      // Refresh conversation list preview
+      setMessages((prev) => (prev.some((item) => item.id === newMsg.id) ? prev : [...prev, newMsg]));
       loadConversations();
-
-      // Trigger realistic mock reply simulation if it's a DM with Elena or Sarah
-      if (activeConversationId === 'conv_dm_001') {
-        simulateReply('usr_002', 'Dr. Elena Rostova', 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=256&q=80', [
-          'Understood. I will run the convergence tests on the cluster and post the results shortly!',
-          'Agreed. Let us also verify the memory consumption under concurrent stream ingestion.',
-          'Great suggestion. I just committed the test suite update.'
-        ]);
-      }
-
       return newMsg;
     } catch (err) {
       addToast({
         type: 'error',
-        title: 'Message Not Sent',
-        message: 'Could not send message. Please try again.'
+        title: 'Message not sent',
+        message: err.message || 'Could not send message.',
       });
       throw err;
     }
   };
 
-  // Simulated auto-reply helper for interactive demo feel
-  const simulateReply = (senderId, senderName, senderAvatar, replies) => {
-    setTimeout(() => {
-      setIsTyping(true);
-    }, 1200);
-
-    setTimeout(async () => {
-      setIsTyping(false);
-      const randomText = replies[Math.floor(Math.random() * replies.length)];
-      const botMsg = await chatService.sendMessage({
-        conversationId: activeConversationId,
-        text: randomText,
-        sender: { id: senderId, name: senderName, avatar: senderAvatar }
-      });
-      setMessages(prev => [...prev, botMsg]);
-      loadConversations();
-    }, 3800);
-  };
-
-  // Edit message
   const editMessage = async (messageId, newText) => {
     try {
       const updated = await chatService.editMessage({
-        conversationId: activeConversationId,
         messageId,
-        newText
+        newText,
+        senderId: user?.id,
       });
-      if (updated) {
-        setMessages(prev => prev.map(m => m.id === messageId ? updated : m));
-        addToast({
-          type: 'success',
-          title: 'Message Edited',
-          message: 'Your update has been saved.'
-        });
-      }
+      setMessages((prev) => prev.map((item) => (item.id === messageId ? updated : item)));
       return updated;
     } catch (err) {
-      addToast({ type: 'error', title: 'Edit Failed', message: 'Could not update message.' });
+      addToast({ type: 'error', title: 'Edit failed', message: err.message || 'Could not update message.' });
+      return null;
     }
   };
 
-  // Delete message
   const deleteMessage = async (messageId) => {
     try {
-      await chatService.deleteMessage({
-        conversationId: activeConversationId,
-        messageId
-      });
-      setMessages(prev => prev.filter(m => m.id !== messageId));
-      addToast({
-        type: 'info',
-        title: 'Message Removed',
-        message: 'The message was deleted from the conversation.'
-      });
+      const updated = await chatService.deleteMessage({ messageId, senderId: user?.id });
+      setMessages((prev) => prev.map((item) => (item.id === messageId ? updated : item)));
     } catch (err) {
-      addToast({ type: 'error', title: 'Delete Failed', message: 'Could not delete message.' });
+      addToast({ type: 'error', title: 'Delete failed', message: err.message || 'Could not delete message.' });
     }
   };
 
-  // Toggle reaction
   const toggleReaction = async (messageId, emoji) => {
     try {
       const updated = await chatService.toggleReaction({
-        conversationId: activeConversationId,
         messageId,
         emoji,
-        userId: user?.id
+        userId: user?.id,
       });
-      if (updated) {
-        setMessages(prev => prev.map(m => m.id === messageId ? updated : m));
-      }
+      setMessages((prev) => prev.map((item) => (item.id === messageId ? updated : item)));
       return updated;
     } catch (err) {
-      console.error('Failed to toggle reaction', err);
+      addToast({ type: 'error', title: 'Reaction failed', message: err.message || 'Could not update reaction.' });
+      return null;
     }
+  };
+
+  const notifyTyping = (isTypingNow) => {
+    if (!activeConversationId) return;
+    chatService.setTyping(activeConversationId, isTypingNow).catch(() => {});
   };
 
   return (
     <ChatContext.Provider
       value={{
-        conversations,
+        conversations: isAuthenticated ? conversations : [],
         activeConversationId,
         setActiveConversationId,
         activeConversation,
-        messages,
-        isLoadingMessages,
-        isTyping,
+        messages: visibleMessages,
+        isLoadingMessages: Boolean(activeConversationId && isAuthenticated && loadedRoomId !== activeConversationId),
+        isTyping: visibleTyping,
+        typingName,
         sendMessage,
         editMessage,
         deleteMessage,
         toggleReaction,
-        refreshConversations: loadConversations
+        notifyTyping,
+        refreshConversations: loadConversations,
       }}
     >
       {children}
@@ -203,8 +180,6 @@ export const ChatProvider = ({ children }) => {
 
 export const useChat = () => {
   const context = useContext(ChatContext);
-  if (!context) {
-    throw new Error('useChat must be used within a ChatProvider');
-  }
+  if (!context) throw new Error('useChat must be used within a ChatProvider');
   return context;
 };

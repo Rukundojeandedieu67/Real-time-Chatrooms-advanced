@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { SearchBar } from '../common/SearchBar';
 import { ConversationItem } from './ConversationItem';
-import { MessageSquarePlus, Users, MessageSquare } from 'lucide-react';
+import { MessageSquarePlus, MessageSquare } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 
 export const ConversationList = ({

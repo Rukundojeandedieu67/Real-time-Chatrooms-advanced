@@ -1,5 +1,4 @@
-import React from 'react';
-import { X, FileText, Image as ImageIcon, FileCode } from 'lucide-react';
+import { X, FileText } from 'lucide-react';
 
 export const AttachmentPreview = ({ attachments = [], onRemove }) => {
   if (!attachments || attachments.length === 0) return null;

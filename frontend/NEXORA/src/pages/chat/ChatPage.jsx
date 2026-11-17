@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ConversationList } from '../../components/chat/ConversationList';
 import { ChatHeader } from '../../components/chat/ChatHeader';
 import { MessageList } from '../../components/chat/MessageList';
@@ -6,7 +7,7 @@ import { MessageComposer } from '../../components/chat/MessageComposer';
 import { ConversationSearchModal } from '../../components/chat/ConversationSearchModal';
 import { useChat } from '../../context/ChatContext';
 import { UserAvatar } from '../../components/common/UserAvatar';
-import { Users, Calendar, MapPin, Mail, Shield, X } from 'lucide-react';
+import { MapPin, Shield, X } from 'lucide-react';
 
 export const ChatPage = () => {
   const {
@@ -17,11 +18,14 @@ export const ChatPage = () => {
     messages,
     isLoadingMessages,
     isTyping,
+    typingName,
     sendMessage,
     editMessage,
     deleteMessage,
-    toggleReaction
+    toggleReaction,
+    notifyTyping
   } = useChat();
+  const navigate = useNavigate();
 
   const [replyingTo, setReplyingTo] = useState(null);
   const [showSearchModal, setShowSearchModal] = useState(false);
@@ -37,7 +41,7 @@ export const ChatPage = () => {
           setActiveConversationId(id);
           setReplyingTo(null);
         }}
-        onNewConversation={() => setActiveConversationId('conv_dm_002')}
+        onNewConversation={() => navigate('/rooms')}
       />
 
       {/* Center: Main Active Conversation Thread */}
@@ -63,7 +67,8 @@ export const ChatPage = () => {
           replyingTo={replyingTo}
           onCancelReply={() => setReplyingTo(null)}
           isTyping={isTyping}
-          partnerName={activeConversation?.participant?.name || 'Contact'}
+          onTyping={notifyTyping}
+          partnerName={typingName || activeConversation?.title || 'Someone'}
         />
       </div>
 

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Bell, CheckCheck, Trash2, Filter, Volume2, Shield } from 'lucide-react';
+import { useState } from 'react';
+import { Bell, CheckCheck } from 'lucide-react';
 import { useNotifications } from '../../context/NotificationContext';
 import { NotificationItem } from '../../components/notifications/NotificationItem';
 import { EmptyState } from '../../components/common/EmptyState';

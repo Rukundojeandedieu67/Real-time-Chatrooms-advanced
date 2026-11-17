@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, ArrowRight, Info } from 'lucide-react';
+import { Sparkles, ArrowRight } from 'lucide-react';
 import { FormField } from '../../components/common/FormField';
 import { PasswordInput } from '../../components/common/PasswordInput';
 import { useAuth } from '../../context/AuthContext';
 
 export const RegisterPage = () => {
-  const { register, isLoading } = useAuth();
+  const { register, isSubmitting } = useAuth();
   const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
@@ -41,14 +41,19 @@ export const RegisterPage = () => {
       return;
     }
 
+    if (formData.password.length < 10) {
+      setError('Password must be at least 10 characters and include a letter and a number.');
+      return;
+    }
+
     try {
-      await register({
+      const result = await register({
         name: formData.name,
         username: formData.username,
         email: formData.email,
         password: formData.password
       });
-      navigate('/verify-email');
+      navigate(result?.user ? '/dashboard' : '/verify-email');
     } catch (err) {
       setError(err.message || 'Registration failed.');
     }
@@ -68,16 +73,6 @@ export const RegisterPage = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
         <div className="glass-dropdown py-8 px-6 sm:px-10 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-xl space-y-5">
-          <div className="p-3 rounded-2xl bg-blue-950/30 border border-blue-500/20 flex items-start gap-2.5 text-xs text-blue-300/90 leading-relaxed">
-            <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold text-blue-200">Frontend Simulation Mode</span>
-              <p className="text-[11px] text-blue-300/80 mt-0.5">
-                No real credentials are sent over the wire. Local mock authentication only.
-              </p>
-            </div>
-          </div>
-
           {error && (
             <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-xs text-rose-400">
               {error}
@@ -86,7 +81,7 @@ export const RegisterPage = () => {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <FormField label="Full Name" required>
+              <FormField label="Display Name" required>
                 <input
                   type="text"
                   name="name"
@@ -98,7 +93,7 @@ export const RegisterPage = () => {
                 />
               </FormField>
 
-              <FormField label="Username" required>
+              <FormField label="Username" required helperText="3-30 characters: lowercase letters, digits, underscore">
                 <input
                   type="text"
                   name="username"
@@ -123,7 +118,7 @@ export const RegisterPage = () => {
               />
             </FormField>
 
-            <FormField label="Password" required>
+            <FormField label="Password" required helperText="At least 10 characters, with a letter and a number">
               <PasswordInput
                 name="password"
                 value={formData.password}
@@ -155,10 +150,10 @@ export const RegisterPage = () => {
 
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isSubmitting}
               className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white font-semibold text-sm shadow-xl shadow-blue-600/30 transition-all active:scale-[0.98] disabled:opacity-50"
             >
-              <span>{isLoading ? 'Creating Account...' : 'Join NEXORA'}</span>
+              <span>{isSubmitting ? 'Creating Account...' : 'Join NEXORA'}</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>

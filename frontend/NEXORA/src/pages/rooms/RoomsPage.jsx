@@ -1,16 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
+import { Plus, Compass } from 'lucide-react';
 import { RoomDirectory } from '../../components/rooms/RoomDirectory';
 import { CreateRoomModal } from '../../components/rooms/CreateRoomModal';
-import { Plus, Compass, Shield, Users, Radio } from 'lucide-react';
-import { useRooms } from '../../context/RoomContext';
 
 export const RoomsPage = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const { rooms } = useRooms();
-
-  const publicCount = rooms.filter((r) => !r.isPrivate).length;
-  const privateCount = rooms.filter((r) => r.isPrivate).length;
-
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Rooms Directory Header */}

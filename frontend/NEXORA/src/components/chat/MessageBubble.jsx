@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
-  MoreVertical,
   Reply,
   Smile,
   Pencil,
@@ -23,7 +22,6 @@ export const MessageBubble = ({
   onToggleReaction
 }) => {
   const { user } = useAuth();
-  const [showMenu, setShowMenu] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(message.text || '');
@@ -35,7 +33,6 @@ export const MessageBubble = ({
     navigator.clipboard.writeText(message.text || '');
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-    setShowMenu(false);
   };
 
   const handleSaveEdit = () => {

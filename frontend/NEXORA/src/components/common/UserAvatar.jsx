@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { OnlineIndicator } from './OnlineIndicator';
 
 export const UserAvatar = ({

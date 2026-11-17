@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import {
   Settings,
   Shield,
@@ -6,12 +6,7 @@ import {
   Bell,
   KeyRound,
   Laptop,
-  Smartphone,
-  LogOut,
-  Check,
-  Volume2,
-  Lock,
-  Globe
+  Smartphone
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -20,7 +15,7 @@ import { PasswordInput } from '../../components/common/PasswordInput';
 import { Modal } from '../../components/common/Modal';
 
 export const SettingsPage = () => {
-  const { user, updatePreferences, logout } = useAuth();
+  const { user, updatePreferences, changePassword } = useAuth();
   const { addToast } = useToast();
 
   const [activeTab, setActiveTab] = useState('appearance'); // 'appearance' | 'account' | 'notifications' | 'security' | 'sessions'
@@ -32,7 +27,7 @@ export const SettingsPage = () => {
 
   // Notification state
   const [desktopNotifs, setDesktopNotifs] = useState(user?.preferences?.desktopNotifications ?? true);
-  const [emailDigest, setEmailDigest] = useState(user?.preferences?.emailDigest || 'weekly');
+  const [emailDigest] = useState(user?.preferences?.emailDigest || 'weekly');
 
   // Change password modal
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -87,24 +82,33 @@ export const SettingsPage = () => {
     });
   };
 
-  const handleChangePassword = (e) => {
+  const handleChangePassword = async (e) => {
     e.preventDefault();
-    if (newPassword.length < 8) {
+    if (newPassword.length < 10) {
       addToast({
         type: 'error',
-        title: 'Error',
-        message: 'New password must be at least 8 characters long.'
+        title: 'Password too short',
+        message: 'Use at least 10 characters, with a letter and a number.'
       });
       return;
     }
-    setShowPasswordModal(false);
-    setOldPassword('');
-    setNewPassword('');
-    addToast({
-      type: 'success',
-      title: 'Password Changed',
-      message: 'Your cryptographic password has been updated (Simulated).'
-    });
+    try {
+      await changePassword({ currentPassword: oldPassword, newPassword });
+      setShowPasswordModal(false);
+      setOldPassword('');
+      setNewPassword('');
+      addToast({
+        type: 'success',
+        title: 'Password changed',
+        message: 'Your password has been updated.'
+      });
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Could not change password',
+        message: err.message || 'Check your current password and try again.'
+      });
+    }
   };
 
   return (
@@ -226,7 +230,7 @@ export const SettingsPage = () => {
                 <input
                   type="text"
                   disabled
-                  value={user?.email || 'alex.rivera@nexora.io'}
+                  value={user?.email || 'Stored with your account'}
                   className="w-full bg-[#161a29] border border-[#24293d] rounded-xl text-slate-300 py-2 px-3 text-xs opacity-75"
                 />
               </div>
@@ -236,7 +240,7 @@ export const SettingsPage = () => {
                 <input
                   type="text"
                   disabled
-                  value={`@${user?.username || 'alex_rivera'}`}
+                  value={`@${user?.username || ''}`}
                   className="w-full bg-[#161a29] border border-[#24293d] rounded-xl text-slate-300 py-2 px-3 text-xs opacity-75"
                 />
               </div>

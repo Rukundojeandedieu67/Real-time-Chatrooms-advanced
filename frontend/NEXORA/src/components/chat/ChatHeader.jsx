@@ -1,5 +1,4 @@
-import React from 'react';
-import { Search, Phone, Video, Info, Pin, MoreHorizontal, ShieldCheck } from 'lucide-react';
+import { Search, Phone, Video, Info, Pin, ShieldCheck } from 'lucide-react';
 import { UserAvatar } from '../common/UserAvatar';
 import { useToast } from '../../context/ToastContext';
 

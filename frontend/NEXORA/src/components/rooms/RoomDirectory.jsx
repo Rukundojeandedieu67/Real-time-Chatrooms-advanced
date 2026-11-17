@@ -1,8 +1,7 @@
-import React from 'react';
 import { SearchBar } from '../common/SearchBar';
 import { RoomCard } from './RoomCard';
 import { useRooms } from '../../context/RoomContext';
-import { Compass, Filter, Sparkles } from 'lucide-react';
+import { Compass } from 'lucide-react';
 import { EmptyState } from '../common/EmptyState';
 import { LoadingState } from '../common/LoadingState';
 
@@ -23,7 +22,7 @@ export const RoomDirectory = ({ onOpenCreateRoom }) => {
     <div className="space-y-6">
       {/* Category Pills Bar */}
       <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-        {categories.map((cat) => (
+        {categories.length > 0 && categories.map((cat) => (
           <button
             key={cat}
             onClick={() => setActiveCategory(cat)}

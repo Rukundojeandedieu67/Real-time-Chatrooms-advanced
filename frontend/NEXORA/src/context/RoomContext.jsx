@@ -1,95 +1,108 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { roomService } from '../services/room.service';
-import { MOCK_ROOM_CATEGORIES } from '../mocks/rooms';
 import { useAuth } from './AuthContext';
 import { useToast } from './ToastContext';
 
 const RoomContext = createContext(null);
 
 export const RoomProvider = ({ children }) => {
-  const { user } = useAuth();
+  const { isAuthenticated } = useAuth();
   const { addToast } = useToast();
 
   const [rooms, setRooms] = useState([]);
-  const [categories] = useState(MOCK_ROOM_CATEGORIES);
-  const [activeCategory, setActiveCategory] = useState('All');
+  const [loadedKey, setLoadedKey] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('all');
-  const [isLoading, setIsLoading] = useState(false);
+  const requestKey = `${isAuthenticated}:${filterType}:${searchQuery}`;
 
   const fetchRooms = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const data = await roomService.getRooms({
-        category: activeCategory,
-        search: searchQuery,
-        filter: filterType
-      });
-      setRooms(data);
-    } catch (err) {
-      console.error('Failed to fetch rooms', err);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [activeCategory, searchQuery, filterType]);
+    if (!isAuthenticated) return [];
+    const data = await roomService.getRooms({ search: searchQuery, filter: filterType });
+    setRooms(data);
+    setLoadedKey(`${isAuthenticated}:${filterType}:${searchQuery}`);
+    return data;
+  }, [isAuthenticated, searchQuery, filterType]);
 
   useEffect(() => {
-    fetchRooms();
-  }, [fetchRooms]);
+    if (!isAuthenticated) return undefined;
+    let active = true;
+    const key = `${isAuthenticated}:${filterType}:${searchQuery}`;
+    roomService
+      .getRooms({ search: searchQuery, filter: filterType })
+      .then((data) => {
+        if (!active) return;
+        setRooms(data);
+        setLoadedKey(key);
+      })
+      .catch((err) => {
+        if (!active) return;
+        setLoadedKey(key);
+        addToast({
+          type: 'error',
+          title: 'Rooms unavailable',
+          message: err.message || 'Could not load rooms.',
+        });
+      });
+    return () => {
+      active = false;
+    };
+  }, [isAuthenticated, searchQuery, filterType, addToast]);
 
   const joinRoom = async (roomId) => {
     try {
-      const updated = await roomService.joinRoom(roomId, user?.id);
-      setRooms(prev => prev.map(r => r.id === roomId ? updated : r));
+      const updated = await roomService.joinRoom(roomId);
+      setRooms((prev) => prev.map((room) => (room.id === roomId ? { ...room, ...updated } : room)));
       addToast({
         type: 'success',
-        title: 'Joined Room',
-        message: `You are now a member of #${updated.name}.`
+        title: 'Joined room',
+        message: `You are now a member of #${updated.name}.`,
       });
       return updated;
     } catch (err) {
       addToast({
         type: 'error',
-        title: 'Join Error',
-        message: 'Could not join room.'
+        title: 'Join failed',
+        message: err.message || 'Could not join room.',
       });
+      throw err;
     }
   };
 
   const leaveRoom = async (roomId) => {
     try {
-      const updated = await roomService.leaveRoom(roomId, user?.id);
-      setRooms(prev => prev.map(r => r.id === roomId ? updated : r));
+      const updated = await roomService.leaveRoom(roomId);
+      setRooms((prev) => prev.map((room) => (room.id === roomId ? { ...room, ...updated, isJoined: false } : room)));
       addToast({
         type: 'info',
-        title: 'Left Room',
-        message: `You have left #${updated.name}.`
+        title: 'Left room',
+        message: 'You have left the room.',
       });
       return updated;
     } catch (err) {
       addToast({
         type: 'error',
-        title: 'Error',
-        message: 'Could not leave room.'
+        title: 'Leave failed',
+        message: err.message || 'Could not leave room.',
       });
+      throw err;
     }
   };
 
   const createRoom = async (payload) => {
     try {
       const newRoom = await roomService.createRoom(payload);
-      setRooms(prev => [newRoom, ...prev]);
+      setRooms((prev) => [newRoom, ...prev.filter((room) => room.id !== newRoom.id)]);
       addToast({
         type: 'success',
-        title: 'Room Created',
-        message: `#${newRoom.name} was successfully created.`
+        title: 'Room created',
+        message: `#${newRoom.name} is ready.`,
       });
       return newRoom;
     } catch (err) {
       addToast({
         type: 'error',
-        title: 'Creation Failed',
-        message: 'Failed to create new room.'
+        title: 'Could not create room',
+        message: err.message || 'Failed to create the room.',
       });
       throw err;
     }
@@ -98,18 +111,18 @@ export const RoomProvider = ({ children }) => {
   const updateRoom = async (roomId, updates) => {
     try {
       const updated = await roomService.updateRoom(roomId, updates);
-      setRooms(prev => prev.map(r => r.id === roomId ? updated : r));
+      setRooms((prev) => prev.map((room) => (room.id === roomId ? { ...room, ...updated } : room)));
       addToast({
         type: 'success',
-        title: 'Room Settings Saved',
-        message: 'Room configurations updated successfully.'
+        title: 'Room updated',
+        message: 'Room settings were saved.',
       });
       return updated;
     } catch (err) {
       addToast({
         type: 'error',
-        title: 'Update Failed',
-        message: 'Failed to update room settings.'
+        title: 'Update failed',
+        message: err.message || 'Failed to update room settings.',
       });
       throw err;
     }
@@ -118,20 +131,20 @@ export const RoomProvider = ({ children }) => {
   return (
     <RoomContext.Provider
       value={{
-        rooms,
-        categories,
-        activeCategory,
-        setActiveCategory,
+        rooms: isAuthenticated ? rooms : [],
+        categories: [],
+        activeCategory: 'All',
+        setActiveCategory: () => {},
         searchQuery,
         setSearchQuery,
         filterType,
         setFilterType,
-        isLoading,
+        isLoading: isAuthenticated && loadedKey !== requestKey,
         joinRoom,
         leaveRoom,
         createRoom,
         updateRoom,
-        refreshRooms: fetchRooms
+        refreshRooms: fetchRooms,
       }}
     >
       {children}
@@ -141,8 +154,6 @@ export const RoomProvider = ({ children }) => {
 
 export const useRooms = () => {
   const context = useContext(RoomContext);
-  if (!context) {
-    throw new Error('useRooms must be used within a RoomProvider');
-  }
+  if (!context) throw new Error('useRooms must be used within a RoomProvider');
   return context;
 };

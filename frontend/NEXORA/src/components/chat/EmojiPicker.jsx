@@ -1,10 +1,7 @@
-import React from 'react';
 
-const COMMON_EMOJIS = [
-  '👍', '❤️', '🔥', '🚀', '💡', '🎉',
-  '😂', '👀', '👏', '💯', '⚡', '🛡️',
-  '✨', '🧠', '☕', '🤖', '🔒', '🎯'
-];
+import { REACTION_GLYPHS } from '../../services/map';
+
+const COMMON_EMOJIS = REACTION_GLYPHS;
 
 export const EmojiPicker = ({ onSelect, onClose }) => {
   return (

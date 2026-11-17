@@ -1,17 +1,10 @@
-import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MessageSquare,
   Compass,
-  Bell,
   Users,
-  Sparkles,
   ArrowRight,
-  Shield,
-  Activity,
-  Plus,
   Zap,
-  Globe,
   Radio
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
@@ -19,16 +12,16 @@ import { useChat } from '../../context/ChatContext';
 import { useRooms } from '../../context/RoomContext';
 import { useNotifications } from '../../context/NotificationContext';
 import { UserAvatar } from '../../components/common/UserAvatar';
-import { MOCK_USERS } from '../../mocks/users';
 
 export const DashboardPage = () => {
   const { user } = useAuth();
   const { conversations, setActiveConversationId } = useChat();
   const { rooms } = useRooms();
-  const { notifications, unreadCount } = useNotifications();
+  const { unreadCount } = useNotifications();
   const navigate = useNavigate();
 
-  const onlineUsers = MOCK_USERS.filter((u) => u.status === 'online' && u.id !== user?.id);
+  const joinedCount = rooms.filter((room) => room.isJoined).length;
+  const unreadRooms = rooms.reduce((sum, room) => sum + (room.unreadCount || 0), 0);
   const featuredRooms = rooms.slice(0, 3);
   const recentDMs = conversations.slice(0, 4);
 
@@ -53,10 +46,10 @@ export const DashboardPage = () => {
               <span>NEXORA Network Online • Real-time Node</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Welcome back, {user?.name || 'Alex'}
+              Welcome back, {user?.name || 'there'}
             </h1>
             <p className="text-sm text-slate-300 max-w-xl leading-relaxed">
-              Connect beyond boundaries. Access technical discourse channels, coordinate with researchers, and stream messages via low-latency simulated endpoints.
+              Connect beyond boundaries. Your rooms, unread messages, and recent activity come from the live API.
             </p>
           </div>
 
@@ -87,7 +80,7 @@ export const DashboardPage = () => {
           </div>
           <div>
             <span className="text-xs text-slate-400 font-medium">Joined Rooms</span>
-            <p className="text-xl font-bold text-white">{user?.stats?.roomsJoined || 8}</p>
+            <p className="text-xl font-bold text-white">{joinedCount}</p>
           </div>
         </div>
 
@@ -96,8 +89,8 @@ export const DashboardPage = () => {
             <MessageSquare className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 font-medium">Messages Sent</span>
-            <p className="text-xl font-bold text-white">{user?.stats?.messagesSent || 1420}</p>
+            <span className="text-xs text-slate-400 font-medium">Open Rooms</span>
+            <p className="text-xl font-bold text-white">{conversations.length}</p>
           </div>
         </div>
 
@@ -106,8 +99,8 @@ export const DashboardPage = () => {
             <Users className="w-6 h-6" />
           </div>
           <div>
-            <span className="text-xs text-slate-400 font-medium">Online Peers</span>
-            <p className="text-xl font-bold text-white">{onlineUsers.length + 1}</p>
+            <span className="text-xs text-slate-400 font-medium">Unread Messages</span>
+            <p className="text-xl font-bold text-white">{unreadRooms}</p>
           </div>
         </div>
 
@@ -245,8 +238,7 @@ export const DashboardPage = () => {
               />
               <div className="min-w-0">
                 <h3 className="text-sm font-bold text-white truncate">{user?.name}</h3>
-                <p className="text-xs text-blue-400 truncate">@{user?.username}</p>
-                <p className="text-[11px] text-slate-400 truncate">{user?.title}</p>
+                <p className="text-[11px] text-slate-400 truncate">@{user?.username}</p>
               </div>
             </div>
 
@@ -264,43 +256,24 @@ export const DashboardPage = () => {
 
           {/* Active Online Network Peers */}
           <div className="p-5 rounded-3xl bg-[#121522]/80 border border-[#23293e] space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.7)]" />
-                <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-                  Online Peers ({onlineUsers.length})
-                </h3>
-              </div>
-            </div>
-
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
+              Your rooms
+            </h3>
             <div className="space-y-2">
-              {onlineUsers.map((peer) => (
-                <div
-                  key={peer.id}
-                  onClick={() => handleOpenChat('conv_dm_001')}
-                  className="flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group"
+              {rooms.filter((room) => room.isJoined).slice(0, 6).map((room) => (
+                <button
+                  key={room.id}
+                  type="button"
+                  onClick={() => handleOpenRoom(room.id)}
+                  className="w-full flex items-center justify-between p-2 rounded-xl hover:bg-white/5 transition-colors text-left"
                 >
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <UserAvatar
-                      src={peer.avatar}
-                      name={peer.name}
-                      status={peer.status}
-                      size="xs"
-                      showIndicator
-                    />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold text-slate-200 group-hover:text-white truncate">
-                        {peer.name}
-                      </p>
-                      <p className="text-[10px] text-slate-400 truncate">{peer.title}</p>
-                    </div>
-                  </div>
-
-                  <span className="text-[10px] text-blue-400 opacity-0 group-hover:opacity-100 transition-opacity">
-                    Chat
-                  </span>
-                </div>
+                  <span className="text-xs font-semibold text-slate-200 truncate">#{room.name}</span>
+                  <span className="text-[10px] text-slate-400">{room.memberCount} members</span>
+                </button>
               ))}
+              {joinedCount === 0 && (
+                <p className="text-xs text-slate-400">Join a public room to start chatting.</p>
+              )}
             </div>
           </div>
         </div>

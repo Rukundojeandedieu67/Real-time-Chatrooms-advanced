@@ -1,24 +1,14 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { UserAvatar } from '../common/UserAvatar';
-import { Shield, MessageSquare, Crown, Search } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { useChat } from '../../context/ChatContext';
+import { Shield, Crown, Search } from 'lucide-react';
 
 export const MemberList = ({ members = [], ownerId, title = 'Channel Members' }) => {
   const [filterQuery, setFilterQuery] = useState('');
-  const navigate = useNavigate();
-  const { setActiveConversationId } = useChat();
 
-  const filteredMembers = members.filter((m) =>
-    m.name.toLowerCase().includes(filterQuery.toLowerCase()) ||
-    m.username.toLowerCase().includes(filterQuery.toLowerCase())
+  const filteredMembers = members.filter((member) =>
+    (member.name || '').toLowerCase().includes(filterQuery.toLowerCase()) ||
+    (member.username || '').toLowerCase().includes(filterQuery.toLowerCase())
   );
-
-  const handleDirectMessage = (member) => {
-    // If conversation exists or simulate opening
-    setActiveConversationId('conv_dm_001');
-    navigate('/chat');
-  };
 
   return (
     <div className="w-64 h-full bg-[#0c0e15] border-l border-[#1e2335] flex flex-col shrink-0">
@@ -70,15 +60,6 @@ export const MemberList = ({ members = [], ownerId, title = 'Channel Members' })
                   <p className="text-[10px] text-slate-400 truncate">@{member.username}</p>
                 </div>
               </div>
-
-              <button
-                type="button"
-                onClick={() => handleDirectMessage(member)}
-                className="opacity-0 group-hover:opacity-100 p-1.5 rounded-lg text-slate-400 hover:text-blue-400 hover:bg-blue-500/10 transition-all shrink-0"
-                title="Send direct message"
-              >
-                <MessageSquare className="w-3.5 h-3.5" />
-              </button>
             </div>
           );
         })}

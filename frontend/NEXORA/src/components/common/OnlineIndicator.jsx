@@ -1,4 +1,3 @@
-import React from 'react';
 
 export const OnlineIndicator = ({ status = 'online', size = 'md', className = '' }) => {
   const sizeClasses = {

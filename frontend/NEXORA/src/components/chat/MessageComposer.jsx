@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Send, Paperclip, Smile, X, Reply } from 'lucide-react';
 import { EmojiPicker } from './EmojiPicker';
 import { AttachmentPreview } from './AttachmentPreview';
@@ -8,13 +8,15 @@ export const MessageComposer = ({
   replyingTo,
   onCancelReply,
   isTyping,
-  partnerName = 'Elena'
+  partnerName = 'Elena',
+  onTyping
 }) => {
   const [text, setText] = useState('');
   const [attachments, setAttachments] = useState([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef(null);
   const fileInputRef = useRef(null);
+  const typingRef = useRef(false);
 
   // Auto focus input
   useEffect(() => {
@@ -47,6 +49,10 @@ export const MessageComposer = ({
 
     setText('');
     setAttachments([]);
+    if (typingRef.current && onTyping) {
+      typingRef.current = false;
+      onTyping(false);
+    }
     if (onCancelReply) onCancelReply();
   };
 
@@ -60,7 +66,8 @@ export const MessageComposer = ({
       name: file.name,
       size: `${(file.size / 1024).toFixed(1)} KB`,
       type: file.type,
-      url: URL.createObjectURL(file)
+      url: URL.createObjectURL(file),
+      file
     }));
 
     setAttachments((prev) => [...prev, ...newAttachments]);
@@ -116,6 +123,7 @@ export const MessageComposer = ({
         <input
           ref={fileInputRef}
           type="file"
+          accept="image/jpeg,image/png,image/webp"
           multiple
           onChange={handleFileChange}
           className="hidden"
@@ -162,7 +170,15 @@ export const MessageComposer = ({
             ref={textareaRef}
             rows={1}
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => {
+              const next = e.target.value;
+              setText(next);
+              const typing = Boolean(next.trim());
+              if (onTyping && typing !== typingRef.current) {
+                typingRef.current = typing;
+                onTyping(typing);
+              }
+            }}
             onKeyDown={handleKeyDown}
             placeholder="Type a message... (Enter to send, Shift+Enter for new line)"
             className="w-full max-h-32 bg-[#141724] border border-[#24293d] rounded-2xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-400 focus:outline-none focus:border-blue-500/80 focus:ring-1 focus:ring-blue-500/50 resize-none transition-all"

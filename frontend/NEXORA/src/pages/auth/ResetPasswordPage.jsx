@@ -1,15 +1,14 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Sparkles, KeyRound, CheckCircle2, Info } from 'lucide-react';
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Sparkles, KeyRound, CheckCircle2 } from 'lucide-react';
 import { FormField } from '../../components/common/FormField';
 import { PasswordInput } from '../../components/common/PasswordInput';
 import { useAuth } from '../../context/AuthContext';
 
 export const ResetPasswordPage = () => {
   const { resetPassword } = useAuth();
-  const navigate = useNavigate();
 
-  const [token, setToken] = useState('simulated-reset-token-77a');
+  const [token, setToken] = useState(() => new URLSearchParams(window.location.search).get('token') || '');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [success, setSuccess] = useState(false);
@@ -50,16 +49,6 @@ export const ResetPasswordPage = () => {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md z-10 px-4">
         <div className="glass-dropdown py-8 px-6 sm:px-10 rounded-3xl border border-white/10 shadow-2xl backdrop-blur-xl space-y-6">
-          <div className="p-3 rounded-2xl bg-blue-950/30 border border-blue-500/20 flex items-start gap-2.5 text-xs text-blue-300/90 leading-relaxed">
-            <Info className="w-4 h-4 text-blue-400 shrink-0 mt-0.5" />
-            <div>
-              <span className="font-semibold text-blue-200">Simulation Demo</span>
-              <p className="text-[11px] text-blue-300/80 mt-0.5">
-                Simulating password confirmation. When backend is connected, this calls Django REST.
-              </p>
-            </div>
-          </div>
-
           {success ? (
             <div className="text-center py-4 space-y-4">
               <div className="w-12 h-12 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-400 flex items-center justify-center mx-auto">
@@ -67,7 +56,7 @@ export const ResetPasswordPage = () => {
               </div>
               <h3 className="text-base font-bold text-white">Password Updated</h3>
               <p className="text-xs text-slate-300 leading-relaxed">
-                Your new password has been stored in local mock session state.
+                Your password has been updated. Sign in with the new one.
               </p>
               <Link
                 to="/login"

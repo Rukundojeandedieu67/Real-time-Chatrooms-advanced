@@ -1,25 +1,46 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Modal } from '../common/Modal';
-import { Search, MessageSquare, Compass, User, Hash, ArrowRight } from 'lucide-react';
+import { Search, MessageSquare, Compass, User, ArrowRight } from 'lucide-react';
 import { useChat } from '../../context/ChatContext';
 import { useRooms } from '../../context/RoomContext';
-import { MOCK_USERS } from '../../mocks/users';
+import { userService } from '../../services/user.service';
 import { UserAvatar } from '../common/UserAvatar';
 
 export const QuickSearchModal = ({ isOpen, onClose }) => {
+  if (!isOpen) return null;
+  return <QuickSearchPanel onClose={onClose} />;
+};
+
+const QuickSearchPanel = ({ onClose }) => {
   const [query, setQuery] = useState('');
   const { conversations, setActiveConversationId } = useChat();
   const { rooms } = useRooms();
+  const [people, setPeople] = useState({ term: '', results: [] });
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (isOpen) {
-      setQuery('');
-    }
-  }, [isOpen]);
+    const term = query.trim();
+    if (!term) return undefined;
+    let active = true;
+    const timer = setTimeout(() => {
+      userService
+        .searchUsers(term)
+        .then((results) => {
+          if (active) setPeople({ term, results });
+        })
+        .catch(() => {
+          if (active) setPeople({ term, results: [] });
+        });
+    }, 250);
+    return () => {
+      active = false;
+      clearTimeout(timer);
+    };
+  }, [query]);
 
   const q = query.toLowerCase().trim();
+  const filteredUsers = people.term === q ? people.results : [];
 
   // Filter conversations
   const filteredConversations = q
@@ -30,11 +51,6 @@ export const QuickSearchModal = ({ isOpen, onClose }) => {
   const filteredRooms = q
     ? rooms.filter(r => r.name.toLowerCase().includes(q) || r.title.toLowerCase().includes(q))
     : rooms.slice(0, 3);
-
-  // Filter users
-  const filteredUsers = q
-    ? MOCK_USERS.filter(u => u.name.toLowerCase().includes(q) || u.username.toLowerCase().includes(q))
-    : [];
 
   const handleSelectConversation = (convId) => {
     setActiveConversationId(convId);
@@ -47,13 +63,12 @@ export const QuickSearchModal = ({ isOpen, onClose }) => {
     onClose();
   };
 
-  const handleSelectUser = (user) => {
-    navigate('/chat');
+  const handleSelectUser = () => {
     onClose();
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} maxWidth="max-w-xl" className="!p-4">
+    <Modal isOpen onClose={onClose} maxWidth="max-w-xl" className="!p-4">
       <div className="space-y-4">
         {/* Search Input Bar */}
         <div className="relative flex items-center">
