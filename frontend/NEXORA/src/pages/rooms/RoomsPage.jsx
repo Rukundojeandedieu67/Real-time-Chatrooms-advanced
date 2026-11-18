@@ -2,9 +2,12 @@ import { useState } from 'react';
 import { Plus, Compass } from 'lucide-react';
 import { RoomDirectory } from '../../components/rooms/RoomDirectory';
 import { CreateRoomModal } from '../../components/rooms/CreateRoomModal';
+import { useRooms } from '../../context/RoomContext';
 
 export const RoomsPage = () => {
+  const { acceptInvite } = useRooms();
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [inviteCode, setInviteCode] = useState('');
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Rooms Directory Header */}
@@ -19,6 +22,25 @@ export const RoomsPage = () => {
           </p>
         </div>
 
+        <form
+          className="flex items-center gap-2"
+          onSubmit={async (event) => {
+            event.preventDefault();
+            if (!inviteCode.trim()) return;
+            await acceptInvite(inviteCode);
+            setInviteCode('');
+          }}
+        >
+          <input
+            value={inviteCode}
+            onChange={(event) => setInviteCode(event.target.value)}
+            placeholder="Invite code"
+            className="bg-[#121522] border border-[#24293d] rounded-xl text-xs text-slate-100 px-3 py-2 w-40"
+          />
+          <button type="submit" className="px-3 py-2 rounded-xl bg-white/10 text-xs font-semibold text-white">
+            Join with invite
+          </button>
+        </form>
         <button
           onClick={() => setIsCreateModalOpen(true)}
           className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-semibold text-xs shadow-lg shadow-blue-600/30 transition-all self-start sm:self-auto active:scale-95"

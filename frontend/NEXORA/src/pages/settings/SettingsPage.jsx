@@ -5,8 +5,6 @@ import {
   Palette,
   Bell,
   KeyRound,
-  Laptop,
-  Smartphone
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -18,7 +16,7 @@ export const SettingsPage = () => {
   const { user, updatePreferences, changePassword } = useAuth();
   const { addToast } = useToast();
 
-  const [activeTab, setActiveTab] = useState('appearance'); // 'appearance' | 'account' | 'notifications' | 'security' | 'sessions'
+  const [activeTab, setActiveTab] = useState('appearance');
 
   // Appearance state
   const [accent, setAccent] = useState('blue');
@@ -34,52 +32,12 @@ export const SettingsPage = () => {
   const [oldPassword, setOldPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  // Active sessions mock list
-  const [sessions, setSessions] = useState([
-    {
-      id: 'sess_01',
-      device: 'MacBook Pro 16" (M3 Max)',
-      browser: 'Brave Browser 1.68',
-      location: 'Zurich, Switzerland',
-      ip: '194.230.14.88',
-      isCurrent: true,
-      lastActive: 'Active Now'
-    },
-    {
-      id: 'sess_02',
-      device: 'iPhone 15 Pro',
-      browser: 'NEXORA Mobile Web',
-      location: 'Zurich, Switzerland',
-      ip: '194.230.14.90',
-      isCurrent: false,
-      lastActive: '2 hours ago'
-    },
-    {
-      id: 'sess_03',
-      device: 'Workstation Linux (Arch)',
-      browser: 'Firefox 128',
-      location: 'Frankfurt, Germany',
-      ip: '85.214.132.11',
-      isCurrent: false,
-      lastActive: '3 days ago'
-    }
-  ]);
-
   const handleSaveAppearance = () => {
     updatePreferences({ accentColor: accent, fontSize, soundEnabled });
   };
 
   const handleSaveNotifications = () => {
     updatePreferences({ desktopNotifications: desktopNotifs, emailDigest });
-  };
-
-  const handleRevokeSession = (sessionId) => {
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-    addToast({
-      type: 'info',
-      title: 'Session Revoked',
-      message: 'The selected device session token was invalidated.'
-    });
   };
 
   const handleChangePassword = async (e) => {
@@ -130,8 +88,7 @@ export const SettingsPage = () => {
           { id: 'appearance', label: 'Appearance', icon: Palette },
           { id: 'account', label: 'Account & Credentials', icon: KeyRound },
           { id: 'notifications', label: 'Notifications & Audio', icon: Bell },
-          { id: 'security', label: 'Privacy & Security', icon: Shield },
-          { id: 'sessions', label: 'Active Sessions', icon: Laptop }
+          { id: 'security', label: 'Privacy & Security', icon: Shield }
         ].map((tab) => {
           const Icon = tab.icon;
           return (
@@ -313,78 +270,11 @@ export const SettingsPage = () => {
         <div className="space-y-6">
           <div className="p-6 rounded-3xl bg-[#121522]/80 border border-[#23293e] space-y-4">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Cryptography & 2FA
+              Account security
             </h3>
             <p className="text-xs text-slate-400">
-              Hardware key authentication and time-based one-time password (TOTP) verification.
+              Password changes are saved through the chat API. Sign out ends this session on the server.
             </p>
-
-            <div className="p-4 rounded-2xl bg-emerald-950/20 border border-emerald-500/20 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-                  <Shield className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-white">Two-Factor Authentication Active</p>
-                  <p className="text-[11px] text-emerald-300/80">Protected via Authenticator App</p>
-                </div>
-              </div>
-
-              <span className="text-[10px] uppercase font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
-                Enabled
-              </span>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {activeTab === 'sessions' && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300">
-              Active Connected Nodes ({sessions.length})
-            </h3>
-          </div>
-
-          <div className="space-y-2.5">
-            {sessions.map((sess) => (
-              <div
-                key={sess.id}
-                className="flex items-center justify-between p-4 rounded-2xl bg-[#121522]/80 border border-[#23293e]"
-              >
-                <div className="flex items-center gap-3.5">
-                  <div className="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-300">
-                    {sess.device.includes('iPhone') ? (
-                      <Smartphone className="w-5 h-5" />
-                    ) : (
-                      <Laptop className="w-5 h-5" />
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-xs font-bold text-white">{sess.device}</p>
-                      {sess.isCurrent && (
-                        <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.2 rounded font-bold border border-emerald-500/20">
-                          Current Device
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-[11px] text-slate-400">
-                      {sess.browser} • {sess.location} ({sess.ip})
-                    </p>
-                  </div>
-                </div>
-
-                {!sess.isCurrent && (
-                  <button
-                    onClick={() => handleRevokeSession(sess.id)}
-                    className="px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 text-xs font-semibold border border-rose-500/20 transition-all"
-                  >
-                    Revoke
-                  </button>
-                )}
-              </div>
-            ))}
           </div>
         </div>
       )}

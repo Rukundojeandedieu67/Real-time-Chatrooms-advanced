@@ -108,6 +108,26 @@ export const RoomProvider = ({ children }) => {
     }
   };
 
+  const acceptInvite = async (code) => {
+    try {
+      await roomService.acceptInvite(code);
+      const data = await fetchRooms();
+      addToast({
+        type: 'success',
+        title: 'Invite accepted',
+        message: 'You joined the room.',
+      });
+      return data;
+    } catch (err) {
+      addToast({
+        type: 'error',
+        title: 'Invite failed',
+        message: err.message || 'That invite code could not be used.',
+      });
+      throw err;
+    }
+  };
+
   const updateRoom = async (roomId, updates) => {
     try {
       const updated = await roomService.updateRoom(roomId, updates);
@@ -143,6 +163,7 @@ export const RoomProvider = ({ children }) => {
         joinRoom,
         leaveRoom,
         createRoom,
+        acceptInvite,
         updateRoom,
         refreshRooms: fetchRooms,
       }}

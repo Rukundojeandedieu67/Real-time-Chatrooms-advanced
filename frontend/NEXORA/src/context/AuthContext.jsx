@@ -103,6 +103,17 @@ export const AuthProvider = ({ children }) => {
     });
   };
 
+  const uploadAvatar = async (file) => {
+    const updated = await userService.uploadAvatar(file);
+    setUser((prev) => ({ ...prev, ...updated }));
+    addToast({
+      type: 'success',
+      title: 'Avatar updated',
+      message: 'Your profile image was saved.',
+    });
+    return updated;
+  };
+
   const updateProfile = async (updates) => {
     const updated = await userService.updateProfile(updates);
     setUser((prev) => ({ ...prev, ...updated }));
@@ -145,6 +156,7 @@ export const AuthProvider = ({ children }) => {
     login,
     register,
     logout,
+    uploadAvatar,
     updateProfile,
     updatePresence,
     updatePreferences,

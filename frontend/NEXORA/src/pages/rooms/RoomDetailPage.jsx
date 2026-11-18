@@ -16,6 +16,13 @@ import { MemberList } from '../../components/rooms/MemberList';
 import { RoomSettingsModal } from '../../components/rooms/RoomSettingsModal';
 import { LoadingState } from '../../components/common/LoadingState';
 
+function applyPresence(members, presence) {
+  const byUser = new Map((presence || []).map((item) => [item.user_id, item.status]));
+  return members.map((member) =>
+    byUser.has(member.id) ? { ...member, status: byUser.get(member.id) } : member
+  );
+}
+
 export const RoomDetailPage = () => {
   const { roomId } = useParams();
   const navigate = useNavigate();
@@ -29,6 +36,7 @@ export const RoomDetailPage = () => {
   const [replyingTo, setReplyingTo] = useState(null);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [showMemberList, setShowMemberList] = useState(true);
+  const [stats, setStats] = useState(null);
 
   // Load room details, members, and messages
   useEffect(() => {
@@ -45,13 +53,17 @@ export const RoomDetailPage = () => {
           setMessages([]);
           return;
         }
-        const [roomMembers, roomMsgs] = await Promise.all([
+        const [roomMembers, roomMsgs, presence] = await Promise.all([
           roomService.getRoomMembers(foundRoom.id),
           chatService.getMessages(foundRoom.id, user?.id),
+          roomService.getPresence(foundRoom.id),
         ]);
         if (!isMounted) return;
-        setMembers(roomMembers);
+        setMembers(applyPresence(roomMembers, presence));
         setMessages(roomMsgs);
+        roomService.getStats(foundRoom.id).then((data) => {
+          if (isMounted) setStats(data);
+        }).catch(() => {});
       } catch (err) {
         console.error(err);
       } finally {
@@ -64,8 +76,13 @@ export const RoomDetailPage = () => {
       try {
         const latest = await roomService.getRoom(roomId);
         if (!isMounted || !latest?.isJoined) return;
-        const roomMsgs = await chatService.getMessages(roomId, user?.id);
-        if (isMounted) setMessages(roomMsgs);
+        const [roomMsgs, presence] = await Promise.all([
+          chatService.getMessages(roomId, user?.id),
+          roomService.getPresence(roomId),
+        ]);
+        if (!isMounted) return;
+        setMessages(roomMsgs);
+        setMembers((current) => applyPresence(current, presence));
       } catch {
         /* keep the last good history */
       }
@@ -155,7 +172,10 @@ export const RoomDetailPage = () => {
                   {room.isPrivate ? 'Private' : 'Public'}
                 </span>
               </div>
-              <p className="text-[11px] text-slate-400 truncate">{room.title}</p>
+              <p className="text-[11px] text-slate-400 truncate">
+                {room.title}
+                {stats ? ` · ${stats.message_count} messages` : ''}
+              </p>
             </div>
           </div>
 
@@ -251,7 +271,21 @@ export const RoomDetailPage = () => {
 
       {/* Right: Members Sidebar */}
       {showMemberList && (
-        <MemberList members={members} ownerId={room.ownerId} title={`#${room.name} Members`} />
+        <MemberList
+          members={members}
+          ownerId={room.ownerId}
+          title={`#${room.name} Members`}
+          myRole={room.myRole}
+          currentUserId={user?.id}
+          onChangeRole={async (userId, role) => {
+            const updated = await roomService.updateMemberRole(room.id, userId, role);
+            setMembers((current) => current.map((member) => (member.id === userId ? updated : member)));
+          }}
+          onRemove={async (userId) => {
+            await roomService.removeMember(room.id, userId);
+            setMembers((current) => current.filter((member) => member.id !== userId));
+          }}
+        />
       )}
 
       {/* Settings Modal */}

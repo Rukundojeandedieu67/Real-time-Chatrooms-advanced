@@ -2,7 +2,15 @@ import { useState } from 'react';
 import { UserAvatar } from '../common/UserAvatar';
 import { Shield, Crown, Search } from 'lucide-react';
 
-export const MemberList = ({ members = [], ownerId, title = 'Channel Members' }) => {
+export const MemberList = ({
+  members = [],
+  ownerId,
+  title = 'Channel Members',
+  myRole,
+  currentUserId,
+  onChangeRole,
+  onRemove,
+}) => {
   const [filterQuery, setFilterQuery] = useState('');
 
   const filteredMembers = members.filter((member) =>
@@ -60,6 +68,25 @@ export const MemberList = ({ members = [], ownerId, title = 'Channel Members' })
                   <p className="text-[10px] text-slate-400 truncate">@{member.username}</p>
                 </div>
               </div>
+              {myRole === 'owner' && member.id !== currentUserId && member.role !== 'owner' && (
+                <div className="flex items-center gap-1">
+                  <select
+                    value={member.role}
+                    onChange={(event) => onChangeRole?.(member.id, event.target.value)}
+                    className="bg-[#121522] border border-[#24293d] rounded-lg text-[10px] text-slate-200 py-1 px-1"
+                  >
+                    <option value="member">member</option>
+                    <option value="admin">admin</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => onRemove?.(member.id)}
+                    className="text-[10px] text-rose-400 px-1"
+                  >
+                    Remove
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

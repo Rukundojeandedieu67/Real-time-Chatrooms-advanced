@@ -44,4 +44,15 @@ export const userService = {
     const profile = await apiClient('/users/me');
     return { ...toProfile(profile), preferences: next };
   },
+
+  async uploadAvatar(file) {
+    const form = new FormData();
+    form.append('file', file);
+    const profile = await apiClient('/users/me/avatar', { method: 'PUT', form });
+    return { ...toProfile(profile), preferences: readPreferences() };
+  },
+
+  async getRoomActivity() {
+    return fetchPages('/analytics/messages-per-room');
+  },
 };

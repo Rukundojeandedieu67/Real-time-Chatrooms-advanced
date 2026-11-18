@@ -140,11 +140,10 @@ export const AppSidebar = ({ onOpenCreateRoom }) => {
             ))}
           </div>
 
-          {/* Quick Mock Notice */}
           <div className="px-3">
             <div className="p-3 rounded-xl bg-blue-950/20 border border-blue-500/20 text-[11px] text-blue-300/80 leading-relaxed">
-              <p className="font-semibold text-blue-300 mb-0.5">Frontend Preview</p>
-              Simulating state locally with mock services. Ready for Django REST + WebSocket integration.
+              <p className="font-semibold text-blue-300 mb-0.5">Live API</p>
+              Rooms, messages, and presence are loaded from the chat API.
             </div>
           </div>
         </div>

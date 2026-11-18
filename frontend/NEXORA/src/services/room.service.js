@@ -77,4 +77,43 @@ export const roomService = {
     const rows = await fetchPages(`/rooms/${roomId}/members`);
     return rows.map(toMember);
   },
+
+  async updateMemberRole(roomId, userId, role) {
+    const row = await apiClient(`/rooms/${roomId}/members/${userId}`, {
+      method: 'PATCH',
+      body: { role },
+    });
+    return toMember(row);
+  },
+
+  async removeMember(roomId, userId) {
+    await apiClient(`/rooms/${roomId}/members/${userId}`, { method: 'DELETE' });
+  },
+
+  async createInvite(roomId) {
+    return apiClient(`/rooms/${roomId}/invites`, {
+      method: 'POST',
+      body: { max_uses: 10, expires_in_hours: 168 },
+    });
+  },
+
+  async acceptInvite(code) {
+    return apiClient(`/invites/${encodeURIComponent(code.trim())}/accept`, { method: 'POST' });
+  },
+
+  async uploadAvatar(roomId, file) {
+    const form = new FormData();
+    form.append('file', file);
+    const room = await apiClient(`/rooms/${roomId}/avatar`, { method: 'PUT', form });
+    return toRoom(room);
+  },
+
+  async getPresence(roomId) {
+    const data = await apiClient(`/rooms/${roomId}/presence`);
+    return data.results || [];
+  },
+
+  async getStats(roomId) {
+    return apiClient(`/rooms/${roomId}/stats`);
+  },
 };

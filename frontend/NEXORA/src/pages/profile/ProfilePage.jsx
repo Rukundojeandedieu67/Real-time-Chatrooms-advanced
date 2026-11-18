@@ -1,25 +1,23 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  MapPin,
   Calendar,
   Mail,
   Edit3
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+import { userService } from '../../services/user.service';
 import { UserAvatar } from '../../components/common/UserAvatar';
 import { Modal } from '../../components/common/Modal';
 import { FormField } from '../../components/common/FormField';
 
 export const ProfilePage = () => {
-  const { user, updateProfile, updatePresence, updatePreferences } = useAuth();
+  const { user, updateProfile, updatePresence, updatePreferences, uploadAvatar } = useAuth();
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [activity, setActivity] = useState([]);
 
   const [editData, setEditData] = useState({
     name: user?.name || '',
-    title: user?.title || '',
     bio: user?.bio || '',
-    location: user?.location || '',
-    statusMessage: user?.statusMessage || ''
   });
 
   const [privacySettings, setPrivacySettings] = useState({
@@ -33,10 +31,36 @@ export const ProfilePage = () => {
     setEditData((prev) => ({ ...prev, [name]: value }));
   };
 
+  useEffect(() => {
+    let active = true;
+    userService
+      .getRoomActivity()
+      .then((rows) => {
+        if (active) setActivity(rows);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [user?.id]);
+
+  const messageCount = activity.reduce((sum, row) => sum + (row.message_count || 0), 0);
+  const busiest = activity.reduce(
+    (best, row) => ((row.message_count || 0) > (best?.message_count || 0) ? row : best),
+    null
+  );
+
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    await updateProfile(editData);
+    await updateProfile({ name: editData.name, bio: editData.bio });
     setIsEditModalOpen(false);
+  };
+
+  const handleAvatar = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    await uploadAvatar(file);
   };
 
   const handleTogglePrivacy = (key) => {
@@ -62,6 +86,10 @@ export const ProfilePage = () => {
                 showIndicator
                 className="w-24 h-24 sm:w-28 sm:h-28 ring-4 ring-[#0a0b10] shadow-2xl"
               />
+              <label className="absolute -bottom-2 left-1/2 -translate-x-1/2 px-2 py-1 rounded-lg bg-blue-600 text-[10px] font-semibold text-white cursor-pointer">
+                Photo
+                <input type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleAvatar} />
+              </label>
             </div>
 
             <div>
@@ -74,7 +102,6 @@ export const ProfilePage = () => {
                 </span>
               </div>
               <p className="text-xs text-blue-400 font-medium">@{user?.username}</p>
-              <p className="text-xs text-slate-300 mt-1">{user?.title}</p>
             </div>
           </div>
 
@@ -82,10 +109,7 @@ export const ProfilePage = () => {
             onClick={() => {
               setEditData({
                 name: user?.name || '',
-                title: user?.title || '',
                 bio: user?.bio || '',
-                location: user?.location || '',
-                statusMessage: user?.statusMessage || ''
               });
               setIsEditModalOpen(true);
             }}
@@ -131,11 +155,6 @@ export const ProfilePage = () => {
               ))}
             </div>
 
-            {user?.statusMessage && (
-              <p className="text-xs text-slate-400 italic pt-1">
-                "{user.statusMessage}"
-              </p>
-            )}
           </div>
 
           {/* Info Card */}
@@ -147,10 +166,6 @@ export const ProfilePage = () => {
               <div className="flex items-center gap-2.5">
                 <Mail className="w-4 h-4 text-slate-400" />
                 <span>{user?.email}</span>
-              </div>
-              <div className="flex items-center gap-2.5">
-                <MapPin className="w-4 h-4 text-slate-400" />
-                <span>{user?.location || 'Remote Node'}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Calendar className="w-4 h-4 text-slate-400" />
@@ -175,16 +190,16 @@ export const ProfilePage = () => {
           {/* Activity Statistics */}
           <div className="grid grid-cols-3 gap-3">
             <div className="p-4 rounded-2xl bg-[#121522]/60 border border-[#23293e] text-center">
-              <p className="text-xl font-extrabold text-blue-400">{user?.stats?.roomsJoined ?? '—'}</p>
+              <p className="text-xl font-extrabold text-blue-400">{activity.length}</p>
               <span className="text-[11px] text-slate-400 mt-1 block">Rooms Joined</span>
             </div>
             <div className="p-4 rounded-2xl bg-[#121522]/60 border border-[#23293e] text-center">
-              <p className="text-xl font-extrabold text-violet-400">{user?.stats?.messagesSent ?? '—'}</p>
-              <span className="text-[11px] text-slate-400 mt-1 block">Messages Sent</span>
+              <p className="text-xl font-extrabold text-violet-400">{messageCount}</p>
+              <span className="text-[11px] text-slate-400 mt-1 block">Messages in Rooms</span>
             </div>
             <div className="p-4 rounded-2xl bg-[#121522]/60 border border-[#23293e] text-center">
-              <p className="text-xl font-extrabold text-emerald-400">{user?.stats?.reactionsGiven ?? '—'}</p>
-              <span className="text-[11px] text-slate-400 mt-1 block">Reactions Given</span>
+              <p className="text-sm font-extrabold text-emerald-400 truncate">{busiest?.room_name || '—'}</p>
+              <span className="text-[11px] text-slate-400 mt-1 block">Busiest Room</span>
             </div>
           </div>
 
@@ -249,7 +264,7 @@ export const ProfilePage = () => {
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         title="Edit Profile Identity"
-        subtitle="Update your visible name, title, and technical biography"
+        subtitle="Update the name and biography stored on your profile"
         maxWidth="max-w-lg"
       >
         <form onSubmit={handleSaveProfile} className="space-y-4">
@@ -261,36 +276,6 @@ export const ProfilePage = () => {
               onChange={handleEditChange}
               className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 py-2 px-3 text-sm focus:outline-none focus:border-blue-500"
               required
-            />
-          </FormField>
-
-          <FormField label="Job Title / Role">
-            <input
-              type="text"
-              name="title"
-              value={editData.title}
-              onChange={handleEditChange}
-              className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 py-2 px-3 text-sm focus:outline-none focus:border-blue-500"
-            />
-          </FormField>
-
-          <FormField label="Status Custom Message">
-            <input
-              type="text"
-              name="statusMessage"
-              value={editData.statusMessage}
-              onChange={handleEditChange}
-              className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 py-2 px-3 text-sm focus:outline-none focus:border-blue-500"
-            />
-          </FormField>
-
-          <FormField label="Location">
-            <input
-              type="text"
-              name="location"
-              value={editData.location}
-              onChange={handleEditChange}
-              className="w-full bg-[#121522] border border-[#24293d] rounded-xl text-slate-100 py-2 px-3 text-sm focus:outline-none focus:border-blue-500"
             />
           </FormField>
 
